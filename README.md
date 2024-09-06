@@ -1,0 +1,3 @@
+# ZSTRzeszow website scraper
+
+Disclaimer: I thought that this is a ideal moment to learn some c. I will probably regret this but oh well...
