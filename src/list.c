@@ -1,5 +1,4 @@
 #include "list.h"
-#include <stdio.h>
 #include <string.h>
 
 void getWardList(Ward *wardList, xmlNodePtr wardHTMLElement,

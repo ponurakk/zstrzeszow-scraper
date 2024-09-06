@@ -1,8 +1,6 @@
 #include "list.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
-#include <libxml/xpath.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
