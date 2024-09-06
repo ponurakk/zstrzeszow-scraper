@@ -1,3 +1,4 @@
+#include "list.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
 #include <libxml/xpath.h>
@@ -75,14 +76,26 @@ int main() {
                                   NULL, NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
-  // get the product HTML elements on the page
   xmlXPathObjectPtr wardHTMLElements =
       xmlXPathEvalExpression((xmlChar *)"//ul[1]/li", context);
 
-  Ward *wards[wardHTMLElements->nodesetval->nodeNr];
+  xmlXPathObjectPtr teachersHTMLElements =
+      xmlXPathEvalExpression((xmlChar *)"//ul[2]/li", context);
+
+  Ward wardList[wardHTMLElements->nodesetval->nodeNr];
+  Teacher teacherList[teachersHTMLElements->nodesetval->nodeNr];
 
   for (int i = 0; i < wardHTMLElements->nodesetval->nodeNr; ++i) {
-    // Scraper logic...
+    xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
+    getWardList(wardList, wardHTMLElement, context, i);
+    printf("%s\n", wardList[i].id);
+  }
+
+  for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
+    xmlNodePtr teacherHTMLElement =
+        teachersHTMLElements->nodesetval->nodeTab[i];
+    getTeachersList(teacherList, teacherHTMLElement, context, i);
+    printf("%s\n", teacherList[i].id);
   }
 
   // free up the allocated resources
