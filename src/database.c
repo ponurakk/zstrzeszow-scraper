@@ -53,6 +53,27 @@ Error createTeachersTable(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
+Error createTimetableTable(sqlite3 *db) {
+  const char *createTable = "CREATE TABLE IF NOT EXISTS \"timetable\" ("
+                            "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
+                            "\"class_id\" VARCHAR,"
+                            "\"teacher_id\" VARCHAR,"
+                            "\"order\" INTEGER NOT NULL,"
+                            "\"hours\" VARCHAR NOT NULL,"
+                            "\"lesson_name\" VARCHAR NOT NULL,"
+                            "\"classroom\" VARCHAR"
+                            ");";
+
+  int rc = sqlite3_exec(db, createTable, 0, 0, 0);
+
+  if (sqliteResult(db, rc, "Created timetable table") != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    return SQLITE_ERROR;
+  }
+
+  return SQLITE_SUCCESS;
+}
+
 Error createDatabase(sqlite3 *db) {
   if (createWardsTable(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
@@ -60,6 +81,11 @@ Error createDatabase(sqlite3 *db) {
   }
 
   if (createTeachersTable(db) != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    return SQLITE_ERROR;
+  }
+
+  if (createTimetableTable(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }

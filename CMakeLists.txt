@@ -6,6 +6,7 @@ set(SOURCE_FILES
   src/error.c
   src/list.c
   src/database.c
+  src/timetable.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

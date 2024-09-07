@@ -8,6 +8,10 @@ const char *errorToString(Error err) {
     return "OK: Operation completed successfully";
   case SQLITE_ERROR:
     return "ERROR: SQLite error";
+  case TIMETABLE_OK:
+    return "OK: Successfully parsed timetable";
+  case TIMETABLE_ERROR:
+    return "ERROR: Failed parsing timetable";
   default:
     return "ERROR: Unknown error.";
   }
