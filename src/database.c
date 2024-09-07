@@ -1,4 +1,5 @@
 #include "error.h"
+#include "list.h"
 #include <sqlite3.h>
 #include <stdio.h>
 
@@ -53,13 +54,6 @@ Error createTeachersTable(sqlite3 *db) {
 }
 
 Error createDatabase(sqlite3 *db) {
-  int rc = sqlite3_open("./sqlite.db", &db);
-
-  if (sqliteResult(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
-    sqlite3_close(db);
-    return SQLITE_ERROR;
-  }
-
   if (createWardsTable(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
@@ -70,6 +64,56 @@ Error createDatabase(sqlite3 *db) {
     return SQLITE_ERROR;
   }
 
-  sqlite3_close(db);
+  return SQLITE_SUCCESS;
+}
+
+Error addWard(sqlite3 *db, Ward ward) {
+  const char *sql = "INSERT INTO wards(class_id, full, class_number, tag) "
+                    "VALUES (?, ?, ?, ?)";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_bind_text(stmt, 1, ward.id, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, ward.full, -1, SQLITE_STATIC);
+  sqlite3_bind_int(stmt, 3, ward.class_number);
+  sqlite3_bind_text(stmt, 4, ward.tag, -1, SQLITE_STATIC);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_finalize(stmt);
+
+  return SQLITE_SUCCESS;
+}
+
+Error addTeacher(sqlite3 *db, Teacher teacher) {
+  const char *sql = "INSERT INTO teachers(teacher_id, name, initials) "
+                    "VALUES (?, ?, ?)";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_bind_text(stmt, 1, teacher.id, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, teacher.name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 3, teacher.initials, -1, SQLITE_STATIC);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_finalize(stmt);
+
   return SQLITE_SUCCESS;
 }

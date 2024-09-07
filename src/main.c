@@ -63,8 +63,16 @@ CURLResponse GetRequest(CURL *curl_handle, const char *url) {
 
 int main() {
   sqlite3 *db;
+  Error err;
 
-  Error err = createDatabase(db);
+  int rc = sqlite3_open(":memory:", &db);
+
+  if (sqliteResult(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    exit(1);
+  }
+
+  err = createDatabase(db);
 
   if (err != SQLITE_SUCCESS) {
     fprintf(stderr, "%s\n", errorToString(err));
@@ -99,6 +107,12 @@ int main() {
     xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
     getWardList(wardList, wardHTMLElement, context, i);
     printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
+
+    err = addWard(db, wardList[i]);
+    if (err != SQLITE_SUCCESS) {
+      fprintf(stderr, "%s\n", errorToString(err));
+      exit(1);
+    }
   }
 
   for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
@@ -106,6 +120,12 @@ int main() {
         teachersHTMLElements->nodesetval->nodeTab[i];
     getTeachersList(teacherList, teacherHTMLElement, context, i);
     printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
+
+    err = addTeacher(db, teacherList[i]);
+    if (err != SQLITE_SUCCESS) {
+      fprintf(stderr, "%s\n", errorToString(err));
+      exit(1);
+    }
   }
 
   // free up the allocated resources
