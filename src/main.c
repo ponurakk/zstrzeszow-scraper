@@ -1,16 +1,11 @@
+#include "main.h"
 #include "database.h"
 #include "error.h"
 #include "list.h"
-#include <curl/curl.h>
+#include "timetable.h"
 #include <libxml/HTMLparser.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct {
-  char *html;
-  size_t size;
-} CURLResponse;
 
 static size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb,
                                 void *userp) {
@@ -126,6 +121,17 @@ int main() {
       fprintf(stderr, "%s\n", errorToString(err));
       exit(1);
     }
+  }
+
+  int wardListSize = sizeof(wardList) / sizeof(wardList[0]);
+
+  for (int i = 0; i < wardListSize; ++i) {
+    err = getTimetable(db, &wardList[i], curl_handle);
+    if (err != TIMETABLE_OK) {
+      fprintf(stderr, "%s\n", errorToString(err));
+      exit(1);
+    }
+    break;
   }
 
   // free up the allocated resources
