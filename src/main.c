@@ -1,18 +1,21 @@
+#include "database.h"
+#include "error.h"
 #include "list.h"
 #include <curl/curl.h>
 #include <libxml/HTMLparser.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct CURLResponse {
+typedef struct {
   char *html;
   size_t size;
-};
+} CURLResponse;
 
 static size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb,
                                 void *userp) {
   size_t realsize = size * nmemb;
-  struct CURLResponse *mem = (struct CURLResponse *)userp;
+  CURLResponse *mem = (CURLResponse *)userp;
   char *ptr = realloc(mem->html, mem->size + realsize + 1);
 
   if (!ptr) {
@@ -28,9 +31,9 @@ static size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb,
   return realsize;
 }
 
-struct CURLResponse GetRequest(CURL *curl_handle, const char *url) {
+CURLResponse GetRequest(CURL *curl_handle, const char *url) {
   CURLcode res;
-  struct CURLResponse response;
+  CURLResponse response;
 
   // initialize the response
   response.html = malloc(1);
@@ -59,6 +62,15 @@ struct CURLResponse GetRequest(CURL *curl_handle, const char *url) {
 }
 
 int main() {
+  sqlite3 *db;
+
+  Error err = createDatabase(db);
+
+  if (err != SQLITE_SUCCESS) {
+    fprintf(stderr, "%s\n", errorToString(err));
+    exit(1);
+  }
+
   // initialize curl globally
   curl_global_init(CURL_GLOBAL_ALL);
 
@@ -66,7 +78,7 @@ int main() {
   CURL *curl_handle = curl_easy_init();
 
   // get the HTML document associated with the page
-  struct CURLResponse response =
+  CURLResponse response =
       GetRequest(curl_handle, "http://zstrzeszow.pl/plan/lista.html");
 
   // parse the HTML document returned by the server
@@ -86,14 +98,14 @@ int main() {
   for (int i = 0; i < wardHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
     getWardList(wardList, wardHTMLElement, context, i);
-    printf("%s\n", wardList[i].id);
+    printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
   }
 
   for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr teacherHTMLElement =
         teachersHTMLElements->nodesetval->nodeTab[i];
     getTeachersList(teacherList, teacherHTMLElement, context, i);
-    printf("%s\n", teacherList[i].id);
+    printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
   }
 
   // free up the allocated resources

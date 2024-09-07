@@ -30,4 +30,4 @@ void getWardList(Ward *wardList, xmlNodePtr wardHTMLElement,
 void getTeachersList(Teacher *teacherList, xmlNodePtr wardHTMLElement,
                      xmlXPathContextPtr context, int i);
 
-#endif // LIST_H
+#endif // !LIST_H
