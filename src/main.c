@@ -4,6 +4,7 @@
 #include "list.h"
 #include "timetable.h"
 #include <libxml/HTMLparser.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -101,7 +102,7 @@ int main() {
   for (int i = 0; i < wardHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
     getWardList(wardList, wardHTMLElement, context, i);
-    printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
+    // printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
 
     err = addWard(db, wardList[i]);
     if (err != SQLITE_SUCCESS) {
@@ -109,12 +110,13 @@ int main() {
       exit(1);
     }
   }
+  printf("INFO: Parsed wards list\n");
 
   for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr teacherHTMLElement =
         teachersHTMLElements->nodesetval->nodeTab[i];
     getTeachersList(teacherList, teacherHTMLElement, context, i);
-    printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
+    // printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
 
     err = addTeacher(db, teacherList[i]);
     if (err != SQLITE_SUCCESS) {
@@ -122,17 +124,22 @@ int main() {
       exit(1);
     }
   }
+  printf("INFO: Parsed teachers list\n");
 
   int wardListSize = sizeof(wardList) / sizeof(wardList[0]);
 
-  for (int i = 0; i < wardListSize; ++i) {
-    err = getTimetable(db, &wardList[i], curl_handle);
+  Lesson lesson[wardListSize];
+
+  for (int i = 19; i < wardListSize; ++i) {
+    err = getTimetable(lesson, i, &wardList[i], curl_handle);
     if (err != TIMETABLE_OK) {
       fprintf(stderr, "%s\n", errorToString(err));
       exit(1);
     }
+    printf("\n\n");
     break;
   }
+  printf("INFO: Parsed timetable\n");
 
   // free up the allocated resources
   free(response.html);
