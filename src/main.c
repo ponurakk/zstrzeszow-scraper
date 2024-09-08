@@ -1,4 +1,5 @@
 #include "main.h"
+#include "array.h"
 #include "database.h"
 #include "error.h"
 #include "list.h"
@@ -128,10 +129,11 @@ int main() {
 
   int wardListSize = sizeof(wardList) / sizeof(wardList[0]);
 
-  Lesson lesson[wardListSize];
+  LessonArray lessonList;
+  arrayInit(&lessonList, 50);
 
   for (int i = 19; i < wardListSize; ++i) {
-    err = getTimetable(lesson, i, &wardList[i], curl_handle);
+    err = getTimetable(&lessonList, i, &wardList[i], curl_handle);
     if (err != TIMETABLE_OK) {
       fprintf(stderr, "%s\n", errorToString(err));
       exit(1);
@@ -141,11 +143,20 @@ int main() {
   }
   printf("INFO: Parsed timetable\n");
 
+  printf("\n\n");
+
+  for (int i = 0; i < lessonList.count; ++i) {
+    if (strlen(lessonList.array[i].lesson_name) > 0) {
+      printf("'%s'\n", lessonList.array[i].lesson_name);
+    }
+  }
+
   // free up the allocated resources
   free(response.html);
   xmlXPathFreeContext(context);
   xmlFreeDoc(doc);
   xmlCleanupParser();
+  arrayFree(&lessonList);
 
   // cleanup the curl instance
   curl_easy_cleanup(curl_handle);

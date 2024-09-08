@@ -1,4 +1,5 @@
 #include "timetable.h"
+#include "array.h"
 #include "error.h"
 #include "main.h"
 #include <ctype.h>
@@ -69,12 +70,13 @@ Error getValidDate(xmlXPathContextPtr context, char *validDate) {
   return TIMETABLE_OK;
 }
 
-Error parse0Span(xmlNodePtr lessonCell) {
-  printf("%s, ", (char *)xmlNodeGetContent(lessonCell));
+Error parse0Span(xmlNodePtr lessonCell, Lesson *l) {
+  l->lesson_name = strdup((char *)xmlNodeGetContent(lessonCell));
+  printf("%s ", l->lesson_name);
   return TIMETABLE_OK;
 }
 
-Error parse2Spans(xmlXPathContextPtr context) {
+Error parse2Spans(xmlXPathContextPtr context, Lesson *l) {
   xmlXPathObjectPtr teacherHTML =
       xmlXPathEvalExpression((xmlChar *)".//a[1]", context);
   if (teacherHTML->nodesetval->nodeNr == 0) {
@@ -85,6 +87,10 @@ Error parse2Spans(xmlXPathContextPtr context) {
 
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
     xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
+
+    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+    l->teacher_id = "";
+    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
 
     printf("%s ", (char *)xmlNodeGetContent(subject));
     // printf("%s ", (char *)xmlNodeGetContent(teacher));
@@ -99,6 +105,10 @@ Error parse2Spans(xmlXPathContextPtr context) {
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
     xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
 
+    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
+    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+
     printf("%s ", (char *)xmlNodeGetContent(subject));
     // printf("%s ", (char *)xmlNodeGetContent(teacher));
     // printf("%s, ", (char *)xmlNodeGetContent(classroom));
@@ -107,7 +117,7 @@ Error parse2Spans(xmlXPathContextPtr context) {
   return TIMETABLE_OK;
 }
 
-Error parse3Spans(xmlXPathContextPtr context) {
+Error parse3Spans(xmlXPathContextPtr context, Lesson *l) {
   xmlXPathObjectPtr teacherHTML =
       xmlXPathEvalExpression((xmlChar *)".//span/a[1]", context);
   if (teacherHTML->nodesetval->nodeNr == 0) {
@@ -121,6 +131,10 @@ Error parse3Spans(xmlXPathContextPtr context) {
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
     xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
     xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
+
+    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
+    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
 
     printf("%s, ", (char *)xmlNodeGetContent(subject));
     // printf("%s, ", (char *)xmlNodeGetContent(teacher));
@@ -137,6 +151,10 @@ Error parse3Spans(xmlXPathContextPtr context) {
     xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
     xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
 
+    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
+    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+
     printf("%s ", (char *)xmlNodeGetContent(subject));
     // printf("%s ", (char *)xmlNodeGetContent(teacher));
     // printf("%s, ", (char *)xmlNodeGetContent(classroom));
@@ -146,7 +164,15 @@ Error parse3Spans(xmlXPathContextPtr context) {
 }
 
 Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
-                  Lesson *lesson) {
+                  LessonArray *lessonList, int order, char *hours) {
+  Lesson l;
+  l.hours = strdup(hours);
+  l.order = order;
+  l.lesson_name = "";
+  l.classroom = "";
+  l.teacher_id = "";
+  l.class_id = "";
+
   if (lessonCell == NULL) {
     fprintf(stderr, "ERROR: lessonCell is NULL\n");
     return TIMETABLE_ERROR;
@@ -165,7 +191,11 @@ Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
       subjectHTML->nodesetval->nodeNr == 0) {
     if (subjectHTML)
       xmlXPathFreeObject(subjectHTML);
-    parse0Span(lessonCell);
+
+    parse0Span(lessonCell, &l);
+    if (strcmp(l.lesson_name, " ")) {
+      arrayPush(lessonList, l);
+    }
     // fprintf(stderr, "ERROR: XPath expression returned no results\n");
     return TIMETABLE_OK;
   }
@@ -173,12 +203,22 @@ Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
   int count = subjectHTML->nodesetval->nodeNr;
 
   if (count == 2) { // Normal
-    parse2Spans(context);
+    parse2Spans(context, &l);
+    arrayPush(lessonList, l);
   } else if (count == 3) { // Single group
-    parse3Spans(context);
+    parse3Spans(context, &l);
+    arrayPush(lessonList, l);
   } else if (count >= 6) { // Two groups or more
+    // TODO: it iters correctly but always gets first element
     for (int i = 0; i < count / 3; ++i) {
-      parse3Spans(context);
+      parse3Spans(context, &l);
+      arrayPush(lessonList, l);
+      l.hours = strdup(hours);
+      l.order = order;
+      l.lesson_name = "";
+      l.classroom = "";
+      l.teacher_id = "";
+      l.class_id = "";
     }
   }
 
@@ -187,8 +227,8 @@ Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
   return TIMETABLE_OK;
 }
 
-Error parseRow(xmlNodePtr row, xmlXPathContextPtr context, Lesson *lesson,
-               int size) {
+Error parseRow(xmlNodePtr row, xmlXPathContextPtr context,
+               LessonArray *lessonList) {
   xmlXPathSetContextNode(row, context);
 
   xmlNodePtr orderCell = xmlXPathEvalExpression((xmlChar *)".//td[1]", context)
@@ -201,16 +241,12 @@ Error parseRow(xmlNodePtr row, xmlXPathContextPtr context, Lesson *lesson,
   int order;
   sscanf(order_str, "%d", &order);
 
-  lesson[size].order = order;
-
   xmlNodePtr hourCell = xmlXPathEvalExpression((xmlChar *)".//td[2]", context)
                             ->nodesetval->nodeTab[0];
   if (hourCell == NULL) {
     return TIMETABLE_ERROR;
   }
   char *hour = (char *)xmlNodeGetContent(hourCell);
-
-  lesson[size].hours = hour;
 
   int len = strlen(hour);
   for (int i = 0; i < len; ++i)
@@ -237,7 +273,8 @@ Error parseRow(xmlNodePtr row, xmlXPathContextPtr context, Lesson *lesson,
 
     xmlNodePtr lessonCell = xpathObj->nodesetval->nodeTab[0];
 
-    if (parseLesson(lessonCell, context, lesson) != TIMETABLE_OK) {
+    if (parseLesson(lessonCell, context, lessonList, order, hour) !=
+        TIMETABLE_OK) {
       xmlXPathFreeObject(xpathObj);
       return TIMETABLE_ERROR;
     }
@@ -250,7 +287,7 @@ Error parseRow(xmlNodePtr row, xmlXPathContextPtr context, Lesson *lesson,
   return TIMETABLE_OK;
 }
 
-Error parseTimetable(xmlXPathContextPtr context, Lesson *lesson, int size) {
+Error parseTimetable(xmlXPathContextPtr context, LessonArray *lesson) {
   xmlXPathObjectPtr rows = xmlXPathEvalExpression(
       (xmlChar *)"//div/table/tr[1]/td/table/tr", context);
 
@@ -263,7 +300,7 @@ Error parseTimetable(xmlXPathContextPtr context, Lesson *lesson, int size) {
 
   for (int i = 1; i < rows->nodesetval->nodeNr; ++i) {
     xmlNodePtr row = rows->nodesetval->nodeTab[i];
-    if (parseRow(row, context, lesson, i) != TIMETABLE_OK) {
+    if (parseRow(row, context, lesson) != TIMETABLE_OK) {
       continue;
     }
   }
@@ -272,7 +309,8 @@ Error parseTimetable(xmlXPathContextPtr context, Lesson *lesson, int size) {
   return TIMETABLE_OK;
 }
 
-Error getTimetable(Lesson *lesson, int i, Ward *ward, CURL *curl_handle) {
+Error getTimetable(LessonArray *lessonList, int i, Ward *ward,
+                   CURL *curl_handle) {
   char timetablePath[100];
   sprintf(timetablePath, "http://zstrzeszow.pl/plan/plany/%s.html", ward->id);
   CURLResponse response = GetRequest(curl_handle, timetablePath);
@@ -294,7 +332,7 @@ Error getTimetable(Lesson *lesson, int i, Ward *ward, CURL *curl_handle) {
   }
   // printf("%s\n", validDate);
 
-  if (parseTimetable(context, lesson, i) != TIMETABLE_OK) {
+  if (parseTimetable(context, lessonList) != TIMETABLE_OK) {
     return TIMETABLE_ERROR;
   }
 
