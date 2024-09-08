@@ -7,6 +7,7 @@ set(SOURCE_FILES
   src/list.c
   src/database.c
   src/timetable.c
+  src/array.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
