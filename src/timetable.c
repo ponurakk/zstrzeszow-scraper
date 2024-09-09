@@ -145,26 +145,15 @@ Error parse3Spans(xmlXPathContextPtr context, Lesson *l, int i) {
     sprintf(subjectXPath, ".//span[%i]/span[1]", i + 1);
     char teacherXPath[25];
     sprintf(teacherXPath, ".//span[%i]/a[1]", i + 1);
-    // char classroomXPath[25];
-    // sprintf(classroomXPath, ".//span[%i]/span[2]", i + 1);
+    char classroomXPath[25];
+    sprintf(classroomXPath, ".//span[%i]/span[2]", i + 1);
 
     xmlXPathObjectPtr subjectHTML =
         xmlXPathEvalExpression((xmlChar *)subjectXPath, context);
     xmlXPathObjectPtr teacherHTML =
         xmlXPathEvalExpression((xmlChar *)teacherXPath, context);
     xmlXPathObjectPtr classroomHTML =
-        xmlXPathEvalExpression((xmlChar *)classroomHTML, context);
-
-    // printf("'%s'\n", subjectXPath);
-    // printf("'%s'\n", teacherXPath);
-    // printf("'%s'\n", classroomXPath);
-
-    // xmlXPathObjectPtr subjectHTML =
-    //     xmlXPathEvalExpression((xmlChar *)".//span[1]/span[1]", context);
-    // xmlXPathObjectPtr teacherHTML =
-    //     xmlXPathEvalExpression((xmlChar *)".//span[1]/a[1]", context);
-    // xmlXPathObjectPtr classroomHTML =
-    //     xmlXPathEvalExpression((xmlChar *)".//span[2]/span[2]", context);
+        xmlXPathEvalExpression((xmlChar *)classroomXPath, context);
 
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
     xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
@@ -174,7 +163,7 @@ Error parse3Spans(xmlXPathContextPtr context, Lesson *l, int i) {
     l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
     l->classroom = strdup((char *)xmlNodeGetContent(classroom));
 
-    printf("%s \n", (char *)xmlNodeGetContent(subject));
+    printf("%s ", (char *)xmlNodeGetContent(subject));
     // printf("%s ", (char *)xmlNodeGetContent(teacher));
     // printf("%s, ", (char *)xmlNodeGetContent(classroom));
   }
