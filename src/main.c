@@ -100,6 +100,7 @@ int main() {
   Ward wardList[wardHTMLElements->nodesetval->nodeNr];
   Teacher teacherList[teachersHTMLElements->nodesetval->nodeNr];
 
+  printf("INFO: Parsing wards list\n");
   for (int i = 0; i < wardHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
     getWardList(wardList, wardHTMLElement, context, i);
@@ -111,8 +112,8 @@ int main() {
       exit(1);
     }
   }
-  printf("INFO: Parsed wards list\n");
 
+  printf("INFO: Parsing teachers list\n");
   for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
     xmlNodePtr teacherHTMLElement =
         teachersHTMLElements->nodesetval->nodeTab[i];
@@ -125,30 +126,25 @@ int main() {
       exit(1);
     }
   }
-  printf("INFO: Parsed teachers list\n");
 
   int wardListSize = sizeof(wardList) / sizeof(wardList[0]);
 
   LessonArray lessonList;
   arrayInit(&lessonList, 50);
 
-  for (int i = 19; i < wardListSize; ++i) {
+  printf("INFO: Parsing timetable\n");
+  for (int i = 0; i < wardListSize; ++i) {
     err = getTimetable(&lessonList, i, &wardList[i], curl_handle);
     if (err != TIMETABLE_OK) {
       fprintf(stderr, "%s\n", errorToString(err));
       exit(1);
     }
-    printf("\n\n");
-    break;
   }
-  printf("INFO: Parsed timetable\n");
-
-  printf("\n\n");
 
   for (int i = 0; i < lessonList.count; ++i) {
-    if (strlen(lessonList.array[i].lesson_name) > 0) {
-      printf("'%s'\n", lessonList.array[i].lesson_name);
-    }
+    printf("INFO: Adding lesson %s from class %s to database\n",
+           lessonList.array[i].lesson_name, lessonList.array[i].class_id);
+    addLesson(db, lessonList.array[i]);
   }
 
   // free up the allocated resources

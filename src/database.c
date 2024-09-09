@@ -1,3 +1,4 @@
+#include "array.h"
 #include "error.h"
 #include "list.h"
 #include <sqlite3.h>
@@ -132,6 +133,36 @@ Error addTeacher(sqlite3 *db, Teacher teacher) {
   sqlite3_bind_text(stmt, 1, teacher.id, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 2, teacher.name, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 3, teacher.initials, -1, SQLITE_STATIC);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_finalize(stmt);
+
+  return SQLITE_SUCCESS;
+}
+
+Error addLesson(sqlite3 *db, Lesson lesson) {
+  const char *sql =
+      "INSERT INTO timetable(class_id, teacher_id, \"order\", hours, "
+      "lesson_name, classroom) "
+      "VALUES (?,?,?,?,?,?)";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_bind_text(stmt, 1, lesson.class_id, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, lesson.teacher_id, -1, SQLITE_STATIC);
+  sqlite3_bind_int(stmt, 3, lesson.order);
+  sqlite3_bind_text(stmt, 4, lesson.hours, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 5, lesson.lesson_name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 6, lesson.classroom, -1, SQLITE_STATIC);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
     fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
