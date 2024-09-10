@@ -16,6 +16,7 @@ Error getGenerationDate(xmlXPathContextPtr context, char *generationDate) {
 
   if (footer == NULL || footer->nodesetval == NULL ||
       footer->nodesetval->nodeNr == 0) {
+    fprintf(stderr, "ERROR: Failed getting footer\n");
     return TIMETABLE_ERROR;
   }
 
@@ -24,12 +25,14 @@ Error getGenerationDate(xmlXPathContextPtr context, char *generationDate) {
 
   if (footerText == NULL) {
     xmlXPathFreeObject(footer);
+    fprintf(stderr, "ERROR: Failed freeing generation date\n");
     return TIMETABLE_ERROR;
   }
 
   if (sscanf(footerText, "\nwygenerowano %10s", generationDate) != 1) {
     xmlFree(footerText);
     xmlXPathFreeObject(footer);
+    fprintf(stderr, "ERROR: Failed parsing generation date\n");
     return TIMETABLE_ERROR;
   }
 
@@ -44,6 +47,7 @@ Error getValidDate(xmlXPathContextPtr context, char *validDate) {
 
   if (footer == NULL || footer->nodesetval == NULL ||
       footer->nodesetval->nodeNr == 0) {
+    fprintf(stderr, "ERROR: Failed getting footer\n");
     return TIMETABLE_ERROR;
   }
 
@@ -52,6 +56,7 @@ Error getValidDate(xmlXPathContextPtr context, char *validDate) {
 
   if (footerText == NULL) {
     xmlXPathFreeObject(footer);
+    fprintf(stderr, "ERROR: Failed freeing generation date\n");
     return TIMETABLE_ERROR;
   }
 
@@ -60,6 +65,7 @@ Error getValidDate(xmlXPathContextPtr context, char *validDate) {
       3) {
     xmlFree(footerText);
     xmlXPathFreeObject(footer);
+    fprintf(stderr, "ERROR: Failed parsing valid from date\n");
     return TIMETABLE_ERROR;
   }
 
@@ -315,17 +321,19 @@ Error getTimetable(LessonArray *lessonList, int i, Ward *ward,
                                   NULL, NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
+  // TODO: Do something with that
   char generationDate[100];
   if (getGenerationDate(context, generationDate) != TIMETABLE_OK) {
-    return TIMETABLE_ERROR;
+    fprintf(stderr, "ERROR: Failed getting generation date\n");
   }
 
   char validDate[100];
   if (getValidDate(context, validDate) != TIMETABLE_OK) {
-    return TIMETABLE_ERROR;
+    fprintf(stderr, "ERROR: Failed getting valid from date\n");
   }
 
   if (parseTimetable(context, lessonList, ward->id) != TIMETABLE_OK) {
+    fprintf(stderr, "ERROR: Failed parsing timetable\n");
     return TIMETABLE_ERROR;
   }
 
