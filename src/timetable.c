@@ -83,12 +83,12 @@ Error parse0Span(xmlNodePtr lessonCell, Lesson *l) {
 
 Error parse2Spans(xmlXPathContextPtr context, Lesson *l) {
   xmlXPathObjectPtr teacherHTML =
-      xmlXPathEvalExpression((xmlChar *)".//a[1]", context);
+      xmlXPathEvalExpression((xmlChar *)".//*[@class=\"n\"]", context);
   if (teacherHTML->nodesetval->nodeNr == 0) {
     xmlXPathObjectPtr subjectHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[1]", context);
+        xmlXPathEvalExpression((xmlChar *)".//*[@class=\"p\"]", context);
     xmlXPathObjectPtr classroomHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[2]", context);
+        xmlXPathEvalExpression((xmlChar *)".//*[@class=\"p\"]", context);
 
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
     xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
@@ -98,9 +98,9 @@ Error parse2Spans(xmlXPathContextPtr context, Lesson *l) {
     l->classroom = strdup((char *)xmlNodeGetContent(classroom));
   } else {
     xmlXPathObjectPtr subjectHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[1]", context);
+        xmlXPathEvalExpression((xmlChar *)".//*[@class=\"p\"]", context);
     xmlXPathObjectPtr classroomHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[2]", context);
+        xmlXPathEvalExpression((xmlChar *)".//*[@class=\"s\"]", context);
 
     xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
     xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
@@ -115,47 +115,36 @@ Error parse2Spans(xmlXPathContextPtr context, Lesson *l) {
 }
 
 Error parse3Spans(xmlXPathContextPtr context, Lesson *l, int i) {
-  xmlXPathObjectPtr teacherHTML =
-      xmlXPathEvalExpression((xmlChar *)".//span[1]/a[1]", context);
-  if (teacherHTML->nodesetval->nodeNr == 0) {
-    xmlXPathObjectPtr subjectHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[1]", context);
-    xmlXPathObjectPtr teacherHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[2]", context);
-    xmlXPathObjectPtr classroomHTML =
-        xmlXPathEvalExpression((xmlChar *)".//span[3]", context);
+  char subjectXPath[25];
+  char teacherXPath[25];
+  char classroomXPath[25];
 
-    xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
-    xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
-    xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
-
-    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
-    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
-    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+  xmlXPathObjectPtr hasChildren =
+      xmlXPathEvalExpression((xmlChar *)".//span[1]/span", context);
+  if (hasChildren->nodesetval->nodeNr == 0) {
+    sprintf(subjectXPath, ".//*[@class=\"p\"]");
+    sprintf(teacherXPath, ".//*[@class=\"n\"]");
+    sprintf(classroomXPath, ".//*[@class=\"s\"]");
   } else {
-
-    char subjectXPath[25];
-    sprintf(subjectXPath, ".//span[%i]/span[1]", i + 1);
-    char teacherXPath[25];
-    sprintf(teacherXPath, ".//span[%i]/a[1]", i + 1);
-    char classroomXPath[25];
-    sprintf(classroomXPath, ".//span[%i]/span[2]", i + 1);
-
-    xmlXPathObjectPtr subjectHTML =
-        xmlXPathEvalExpression((xmlChar *)subjectXPath, context);
-    xmlXPathObjectPtr teacherHTML =
-        xmlXPathEvalExpression((xmlChar *)teacherXPath, context);
-    xmlXPathObjectPtr classroomHTML =
-        xmlXPathEvalExpression((xmlChar *)classroomXPath, context);
-
-    xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
-    xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
-    xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
-
-    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
-    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
-    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+    sprintf(subjectXPath, ".//span[%i]/*[@class=\"p\"]", i + 1);
+    sprintf(teacherXPath, ".//span[%i]/*[@class=\"n\"]", i + 1);
+    sprintf(classroomXPath, ".//span[%i]/*[@class=\"s\"]", i + 1);
   }
+
+  xmlXPathObjectPtr subjectHTML =
+      xmlXPathEvalExpression((xmlChar *)subjectXPath, context);
+  xmlXPathObjectPtr teacherHTML =
+      xmlXPathEvalExpression((xmlChar *)teacherXPath, context);
+  xmlXPathObjectPtr classroomHTML =
+      xmlXPathEvalExpression((xmlChar *)classroomXPath, context);
+
+  xmlNodePtr subject = subjectHTML->nodesetval->nodeTab[0];
+  xmlNodePtr teacher = teacherHTML->nodesetval->nodeTab[0];
+  xmlNodePtr classroom = classroomHTML->nodesetval->nodeTab[0];
+
+  l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+  l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
+  l->classroom = strdup((char *)xmlNodeGetContent(classroom));
 
   return TIMETABLE_OK;
 }
