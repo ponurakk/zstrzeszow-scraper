@@ -156,7 +156,7 @@ Error parse3Spans(xmlXPathContextPtr context, Lesson *l, int i) {
 
 Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
                   LessonArray *lessonList, int order, char *hours,
-                  char *ward_id) {
+                  char *ward_id, int weekday) {
   Lesson l;
   l.hours = strdup(hours);
   l.order = order;
@@ -164,6 +164,7 @@ Error parseLesson(xmlNodePtr lessonCell, xmlXPathContextPtr context,
   l.classroom = "";
   l.teacher_id = "";
   l.class_id = strdup(ward_id);
+  l.weekday = weekday;
 
   if (lessonCell == NULL) {
     fprintf(stderr, "ERROR: lessonCell is NULL\n");
@@ -265,8 +266,8 @@ Error parseRow(xmlNodePtr row, xmlXPathContextPtr context,
 
     xmlNodePtr lessonCell = xpathObj->nodesetval->nodeTab[0];
 
-    if (parseLesson(lessonCell, context, lessonList, order, hour, ward_id) !=
-        TIMETABLE_OK) {
+    if (parseLesson(lessonCell, context, lessonList, order, hour, ward_id,
+                    i - 2) != TIMETABLE_OK) {
       xmlXPathFreeObject(xpathObj);
       return TIMETABLE_ERROR;
     }

@@ -9,6 +9,7 @@ typedef struct Lesson {
   char *hours;
   char *lesson_name;
   char *classroom;
+  int weekday;
 } Lesson;
 
 #include <stdlib.h>

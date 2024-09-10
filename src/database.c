@@ -62,7 +62,8 @@ Error createTimetableTable(sqlite3 *db) {
                             "\"order\" INTEGER NOT NULL,"
                             "\"hours\" VARCHAR NOT NULL,"
                             "\"lesson_name\" VARCHAR NOT NULL,"
-                            "\"classroom\" VARCHAR"
+                            "\"classroom\" VARCHAR,"
+                            "\"weekday\" INTEGER NOT NULL"
                             ");";
 
   int rc = sqlite3_exec(db, createTable, 0, 0, 0);
@@ -148,8 +149,8 @@ Error addTeacher(sqlite3 *db, Teacher teacher) {
 Error addLesson(sqlite3 *db, Lesson lesson) {
   const char *sql =
       "INSERT INTO timetable(class_id, teacher_id, \"order\", hours, "
-      "lesson_name, classroom) "
-      "VALUES (?,?,?,?,?,?)";
+      "lesson_name, classroom, weekday) "
+      "VALUES (?,?,?,?,?,?,?)";
   sqlite3_stmt *stmt;
 
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -163,6 +164,7 @@ Error addLesson(sqlite3 *db, Lesson lesson) {
   sqlite3_bind_text(stmt, 4, lesson.hours, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 5, lesson.lesson_name, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 6, lesson.classroom, -1, SQLITE_STATIC);
+  sqlite3_bind_int(stmt, 7, lesson.weekday);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
     fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
