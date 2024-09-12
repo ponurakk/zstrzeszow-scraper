@@ -1,11 +1,12 @@
 #include "../utils/error.h"
+#include "router.h"
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-void respond_with_html(int client_socket, char *html);
+void respond_http(int client_socket, char *html, long file_size);
 char *read_file(const char *filename, long *file_size);
 Error handle_client(int client_socket);
 
@@ -69,24 +70,26 @@ Error handle_client(int client_socket) {
     return WEB_SERVER_ERROR;
   }
 
-  file_buffer = read_file("views/index.html", &file_size);
+  char *file_path = path_to_file(path);
+
+  file_buffer = read_file(file_path, &file_size);
   if (file_buffer == NULL) {
     close(client_socket);
     return WEB_SERVER_ERROR;
   }
 
-  respond_with_html(client_socket, file_buffer);
+  respond_http(client_socket, file_buffer, file_size);
 
   free(file_buffer);
 
   return WEB_SERVER_OK;
 }
 
-void respond_with_html(int client_socket, char *html) {
-  char response[2048];
+void respond_http(int client_socket, char *html, long file_size) {
+  char response[file_size + 100];
   snprintf(response, sizeof(response),
-           "HTTP/1.1 200 OK\r\nContent-Length: %lu\r\nContent-Type: "
-           "text/html;charset=UTF-8\r\n\r\n%s",
+           "HTTP/1.1 200 OK\r\nContent-Length: %lu"
+           "charset=UTF-8\r\n\r\n%s",
            strlen(html), html);
   write(client_socket, response, strlen(response));
 }
