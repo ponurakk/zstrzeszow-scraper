@@ -1,13 +1,7 @@
 #include "timetable.h"
-#include "array.h"
-#include "error.h"
-#include "main.h"
+#include "../main.h"
 #include <ctype.h>
 #include <libxml2/libxml/HTMLparser.h>
-#include <libxml2/libxml/parser.h>
-#include <libxml2/libxml/xmlmemory.h>
-#include <libxml2/libxml/xpath.h>
-#include <stdio.h>
 #include <string.h>
 
 Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {

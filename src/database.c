@@ -1,8 +1,7 @@
-#include "array.h"
-#include "error.h"
-#include "list.h"
+#include "scraper/list.h"
+#include "utils/array.h"
+#include "utils/error.h"
 #include <sqlite3.h>
-#include <stdio.h>
 
 Error sqlite_result(sqlite3 *db, int rc, const char *success_message) {
   if (rc == SQLITE_OK || rc == SQLITE_DONE || rc == SQLITE_ROW) {

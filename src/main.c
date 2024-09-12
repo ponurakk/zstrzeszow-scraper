@@ -1,12 +1,6 @@
 #include "main.h"
-#include "array.h"
-#include "database.h"
-#include "error.h"
-#include "list.h"
-#include "timetable.h"
+#include "scraper/timetable.h"
 #include <libxml/HTMLparser.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
@@ -62,7 +56,7 @@ int main() {
   sqlite3 *db;
   Error err;
 
-  int rc = sqlite3_open("./sqlite.db", &db);
+  int rc = sqlite3_open(":memory:", &db);
 
   if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
     sqlite3_close(db);

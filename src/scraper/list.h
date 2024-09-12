@@ -1,7 +1,6 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include <libxml2/libxml/parser.h>
 #include <libxml2/libxml/xpath.h>
 
 typedef struct {

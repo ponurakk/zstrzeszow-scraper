@@ -1,9 +1,10 @@
 #pragma once
-#include "array.h"
+#include "../utils/array.h"
+#include "../utils/error.h"
 #ifndef TIMETABLE_H
 #define TIMETABLE_H
 
-#include "database.h"
+#include "../database.h"
 #include "error.h"
 #include "list.h"
 #include <curl/curl.h>

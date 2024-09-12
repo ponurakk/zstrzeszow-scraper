@@ -1,5 +1,4 @@
 #include "array.h"
-#include <stdlib.h>
 
 #define DEFINE_ARRAY_IMPLEMENTATION(type)                                      \
   void type##ArrayInit(type##Array *array, size_t size) {                      \

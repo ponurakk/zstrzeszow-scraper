@@ -3,11 +3,11 @@ project(zstrzeszow-scraper VERSION 0.1.0 LANGUAGES C)
 
 set(SOURCE_FILES
   src/main.c
-  src/error.c
-  src/list.c
+  src/utils/error.c
+  src/utils/array.c
+  src/scraper/list.c
+  src/scraper/timetable.c
   src/database.c
-  src/timetable.c
-  src/array.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

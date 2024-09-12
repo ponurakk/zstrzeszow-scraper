@@ -1,9 +1,9 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include "array.h"
-#include "error.h"
-#include "list.h"
+#include "scraper/list.h"
+#include "utils/array.h"
+#include "utils/error.h"
 #include <sqlite3.h>
 
 Error sqlite_result(sqlite3 *db, int rc, const char *successMessage);
