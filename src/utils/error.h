@@ -8,6 +8,8 @@ typedef enum {
   TIMETABLE_ERROR = 3,
   SCRAPER_OK = 4,
   SCRAPER_ERROR = 5,
+  WEB_SERVER_OK = 6,
+  WEB_SERVER_ERROR = 7,
 } Error;
 
 const char *error_to_string(Error err);

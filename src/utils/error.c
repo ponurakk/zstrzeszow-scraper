@@ -16,6 +16,10 @@ const char *error_to_string(Error err) {
     return "OK: Successfully scraped website";
   case SCRAPER_ERROR:
     return "ERROR: Failed scraping website";
+  case WEB_SERVER_OK:
+    return "OK: Successfull operation";
+  case WEB_SERVER_ERROR:
+    return "ERROR: Server error";
   default:
     return "ERROR: Unknown error.";
   }

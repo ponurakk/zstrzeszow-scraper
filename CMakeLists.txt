@@ -10,6 +10,9 @@ set(SOURCE_FILES
   src/scraper/list.c
   src/scraper/timetable.c
   src/database.c
+  src/server/listener.c
+  src/server/handler.c
+  src/server/router.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})

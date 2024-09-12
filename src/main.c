@@ -1,6 +1,7 @@
 #include "main.h"
 #include "database.h"
 #include "scraper/timetable.h"
+#include "server/listener.h"
 #include "utils/error.h"
 #include <libxml/HTMLparser.h>
 #include <stdio.h>
@@ -200,6 +201,12 @@ int main() {
     xmlCleanupParser();
     curl_easy_cleanup(curl_handle);
     curl_global_cleanup();
+  }
+
+  err = server();
+  if (err != WEB_SERVER_OK) {
+    fprintf(stderr, "ERROR: Failed launching web server");
+    exit(1);
   }
 
   xmlCleanupParser();
