@@ -24,10 +24,10 @@ typedef struct {
   char *name;
 } Teacher;
 
-void getWardList(Ward *wardList, xmlNodePtr wardHTMLElement,
-                 xmlXPathContextPtr context, int i);
+void get_ward_list(Ward *ward_list, xmlNodePtr ward_html_element,
+                   xmlXPathContextPtr context, int i);
 
-void getTeachersList(Teacher *teacherList, xmlNodePtr wardHTMLElement,
-                     xmlXPathContextPtr context, int i);
+void get_teachers_list(Teacher *teacher_list, xmlNodePtr ward_html_element,
+                       xmlXPathContextPtr context, int i);
 
 #endif // !LIST_H

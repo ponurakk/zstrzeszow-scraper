@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb,
-                                void *userp) {
+static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
+                                  void *userp) {
   size_t realsize = size * nmemb;
   CURLResponse *mem = (CURLResponse *)userp;
   char *ptr = realloc(mem->html, mem->size + realsize + 1);
@@ -28,7 +28,7 @@ static size_t WriteHTMLCallback(void *contents, size_t size, size_t nmemb,
   return realsize;
 }
 
-CURLResponse GetRequest(CURL *curl_handle, const char *url) {
+CURLResponse get_request(CURL *curl_handle, const char *url) {
   CURLcode res;
   CURLResponse response;
 
@@ -39,7 +39,7 @@ CURLResponse GetRequest(CURL *curl_handle, const char *url) {
   // specify URL to GET
   curl_easy_setopt(curl_handle, CURLOPT_URL, url);
   // send all data returned by the server to WriteHTMLCallback
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteHTMLCallback);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_html_callback);
   // pass "response" to the callback function
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&response);
   // set a User-Agent header
@@ -62,17 +62,17 @@ int main() {
   sqlite3 *db;
   Error err;
 
-  int rc = sqlite3_open(":memory:", &db);
+  int rc = sqlite3_open("./sqlite.db", &db);
 
-  if (sqliteResult(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
+  if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
     sqlite3_close(db);
     exit(1);
   }
 
-  err = createDatabase(db);
+  err = create_database(db);
 
   if (err != SQLITE_SUCCESS) {
-    fprintf(stderr, "%s\n", errorToString(err));
+    fprintf(stderr, "%s\n", error_to_string(err));
     exit(1);
   }
 
@@ -84,67 +84,67 @@ int main() {
 
   // get the HTML document associated with the page
   CURLResponse response =
-      GetRequest(curl_handle, "http://zstrzeszow.pl/plan/lista.html");
+      get_request(curl_handle, "http://zstrzeszow.pl/plan/lista.html");
 
   // parse the HTML document returned by the server
   htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
                                   NULL, NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
-  xmlXPathObjectPtr wardHTMLElements =
+  xmlXPathObjectPtr ward_html_elements =
       xmlXPathEvalExpression((xmlChar *)"//ul[1]/li", context);
 
-  xmlXPathObjectPtr teachersHTMLElements =
+  xmlXPathObjectPtr teachers_html_elements =
       xmlXPathEvalExpression((xmlChar *)"//ul[2]/li", context);
 
-  Ward wardList[wardHTMLElements->nodesetval->nodeNr];
-  Teacher teacherList[teachersHTMLElements->nodesetval->nodeNr];
+  Ward ward_list[ward_html_elements->nodesetval->nodeNr];
+  Teacher teacher_list[teachers_html_elements->nodesetval->nodeNr];
 
   printf("INFO: Parsing wards list\n");
-  for (int i = 0; i < wardHTMLElements->nodesetval->nodeNr; ++i) {
-    xmlNodePtr wardHTMLElement = wardHTMLElements->nodesetval->nodeTab[i];
-    getWardList(wardList, wardHTMLElement, context, i);
+  for (int i = 0; i < ward_html_elements->nodesetval->nodeNr; ++i) {
+    xmlNodePtr ward_html_element = ward_html_elements->nodesetval->nodeTab[i];
+    get_ward_list(ward_list, ward_html_element, context, i);
     // printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
 
-    err = addWard(db, wardList[i]);
+    err = add_ward(db, ward_list[i]);
     if (err != SQLITE_SUCCESS) {
-      fprintf(stderr, "%s\n", errorToString(err));
+      fprintf(stderr, "%s\n", error_to_string(err));
       exit(1);
     }
   }
 
   printf("INFO: Parsing teachers list\n");
-  for (int i = 0; i < teachersHTMLElements->nodesetval->nodeNr; ++i) {
-    xmlNodePtr teacherHTMLElement =
-        teachersHTMLElements->nodesetval->nodeTab[i];
-    getTeachersList(teacherList, teacherHTMLElement, context, i);
+  for (int i = 0; i < teachers_html_elements->nodesetval->nodeNr; ++i) {
+    xmlNodePtr teacher_html_element =
+        teachers_html_elements->nodesetval->nodeTab[i];
+    get_teachers_list(teacher_list, teacher_html_element, context, i);
     // printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
 
-    err = addTeacher(db, teacherList[i]);
+    err = add_teacher(db, teacher_list[i]);
     if (err != SQLITE_SUCCESS) {
-      fprintf(stderr, "%s\n", errorToString(err));
+      fprintf(stderr, "%s\n", error_to_string(err));
       exit(1);
     }
   }
 
-  int wardListSize = sizeof(wardList) / sizeof(wardList[0]);
+  int ward_list_size = sizeof(ward_list) / sizeof(ward_list[0]);
 
-  LessonArray lessonList;
-  arrayInit(&lessonList, 50);
+  LessonArray lesson_list;
+  arrayInit(&lesson_list, 50);
 
   printf("INFO: Parsing timetable\n");
-  for (int i = 0; i < wardListSize; ++i) {
-    err = getTimetable(&lessonList, i, &wardList[i], curl_handle);
+  for (int i = 0; i < ward_list_size; ++i) {
+    err = get_timetable(&lesson_list, i, &ward_list[i], curl_handle);
     if (err != TIMETABLE_OK) {
-      fprintf(stderr, "%s\n", errorToString(err));
+      fprintf(stderr, "%s\n", error_to_string(err));
       exit(1);
     }
   }
 
-  for (int i = 0; i < lessonList.count; ++i) {
+  for (int i = 0; i < lesson_list.count; ++i) {
     printf("INFO: Adding lesson %s from class %s to database\n",
-           lessonList.array[i].lesson_name, lessonList.array[i].class_id);
-    addLesson(db, lessonList.array[i]);
+           lesson_list.array[i].lesson_name, lesson_list.array[i].class_id);
+    add_lesson(db, lesson_list.array[i]);
   }
 
   // free up the allocated resources
@@ -152,7 +152,7 @@ int main() {
   xmlXPathFreeContext(context);
   xmlFreeDoc(doc);
   xmlCleanupParser();
-  arrayFree(&lessonList);
+  arrayFree(&lesson_list);
 
   // cleanup the curl instance
   curl_easy_cleanup(curl_handle);

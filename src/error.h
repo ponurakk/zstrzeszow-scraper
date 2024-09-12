@@ -8,6 +8,6 @@ typedef enum {
   TIMETABLE_ERROR = 3,
 } Error;
 
-const char *errorToString(Error err);
+const char *error_to_string(Error err);
 
 #endif // !ERROR_H

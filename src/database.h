@@ -6,12 +6,12 @@
 #include "list.h"
 #include <sqlite3.h>
 
-Error sqliteResult(sqlite3 *db, int rc, const char *successMessage);
+Error sqlite_result(sqlite3 *db, int rc, const char *successMessage);
 
-Error createDatabase(sqlite3 *db);
+Error create_database(sqlite3 *db);
 
-Error addWard(sqlite3 *db, Ward ward);
-Error addTeacher(sqlite3 *db, Teacher teacher);
-Error addLesson(sqlite3 *db, Lesson lesson);
+Error add_ward(sqlite3 *db, Ward ward);
+Error add_teacher(sqlite3 *db, Teacher teacher);
+Error add_lesson(sqlite3 *db, Lesson lesson);
 
 #endif // !DATABASE_H

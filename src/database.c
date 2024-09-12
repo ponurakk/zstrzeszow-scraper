@@ -4,10 +4,10 @@
 #include <sqlite3.h>
 #include <stdio.h>
 
-Error sqliteResult(sqlite3 *db, int rc, const char *successMessage) {
+Error sqlite_result(sqlite3 *db, int rc, const char *success_message) {
   if (rc == SQLITE_OK || rc == SQLITE_DONE || rc == SQLITE_ROW) {
-    if (successMessage != NULL) {
-      fprintf(stderr, "INFO: %s\n", successMessage);
+    if (success_message != NULL) {
+      fprintf(stderr, "INFO: %s\n", success_message);
     }
     return SQLITE_SUCCESS;
   } else {
@@ -17,18 +17,18 @@ Error sqliteResult(sqlite3 *db, int rc, const char *successMessage) {
   return SQLITE_ERROR;
 }
 
-Error createWardsTable(sqlite3 *db) {
-  const char *createTable = "CREATE TABLE IF NOT EXISTS \"wards\" ("
-                            "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
-                            "\"class_id\" VARCHAR NOT NULL,"
-                            "\"full\" VARCHAR NOT NULL,"
-                            "\"class_number\" INTEGER NOT NULL,"
-                            "\"tag\" VARCHAR NOT NULL"
-                            ");";
+Error create_wards_table(sqlite3 *db) {
+  const char *create_table = "CREATE TABLE IF NOT EXISTS \"wards\" ("
+                             "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
+                             "\"class_id\" VARCHAR NOT NULL,"
+                             "\"full\" VARCHAR NOT NULL,"
+                             "\"class_number\" INTEGER NOT NULL,"
+                             "\"tag\" VARCHAR NOT NULL"
+                             ");";
 
-  int rc = sqlite3_exec(db, createTable, 0, 0, 0);
+  int rc = sqlite3_exec(db, create_table, 0, 0, 0);
 
-  if (sqliteResult(db, rc, "Created wards table") != SQLITE_SUCCESS) {
+  if (sqlite_result(db, rc, "Created wards table") != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
@@ -36,17 +36,17 @@ Error createWardsTable(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
-Error createTeachersTable(sqlite3 *db) {
-  const char *createTable = "CREATE TABLE IF NOT EXISTS \"teachers\" ("
-                            "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
-                            "\"teacher_id\" VARCHAR NOT NULL,"
-                            "\"name\" VARCHAR NOT NULL,"
-                            "\"initials\" VARCHAR NOT NULL"
-                            ");";
+Error create_teachers_table(sqlite3 *db) {
+  const char *create_table = "CREATE TABLE IF NOT EXISTS \"teachers\" ("
+                             "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
+                             "\"teacher_id\" VARCHAR NOT NULL,"
+                             "\"name\" VARCHAR NOT NULL,"
+                             "\"initials\" VARCHAR NOT NULL"
+                             ");";
 
-  int rc = sqlite3_exec(db, createTable, 0, 0, 0);
+  int rc = sqlite3_exec(db, create_table, 0, 0, 0);
 
-  if (sqliteResult(db, rc, "Created teachers table") != SQLITE_SUCCESS) {
+  if (sqlite_result(db, rc, "Created teachers table") != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
@@ -54,21 +54,21 @@ Error createTeachersTable(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
-Error createTimetableTable(sqlite3 *db) {
-  const char *createTable = "CREATE TABLE IF NOT EXISTS \"timetable\" ("
-                            "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
-                            "\"class_id\" VARCHAR,"
-                            "\"teacher_id\" VARCHAR,"
-                            "\"order\" INTEGER NOT NULL,"
-                            "\"hours\" VARCHAR NOT NULL,"
-                            "\"lesson_name\" VARCHAR NOT NULL,"
-                            "\"classroom\" VARCHAR,"
-                            "\"weekday\" INTEGER NOT NULL"
-                            ");";
+Error create_timetable_table(sqlite3 *db) {
+  const char *create_table = "CREATE TABLE IF NOT EXISTS \"timetable\" ("
+                             "\"id\" INTEGER PRIMARY KEY AUTOINCREMENT,"
+                             "\"class_id\" VARCHAR,"
+                             "\"teacher_id\" VARCHAR,"
+                             "\"order\" INTEGER NOT NULL,"
+                             "\"hours\" VARCHAR NOT NULL,"
+                             "\"lesson_name\" VARCHAR NOT NULL,"
+                             "\"classroom\" VARCHAR,"
+                             "\"weekday\" INTEGER NOT NULL"
+                             ");";
 
-  int rc = sqlite3_exec(db, createTable, 0, 0, 0);
+  int rc = sqlite3_exec(db, create_table, 0, 0, 0);
 
-  if (sqliteResult(db, rc, "Created timetable table") != SQLITE_SUCCESS) {
+  if (sqlite_result(db, rc, "Created timetable table") != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
@@ -76,18 +76,18 @@ Error createTimetableTable(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
-Error createDatabase(sqlite3 *db) {
-  if (createWardsTable(db) != SQLITE_SUCCESS) {
+Error create_database(sqlite3 *db) {
+  if (create_wards_table(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
 
-  if (createTeachersTable(db) != SQLITE_SUCCESS) {
+  if (create_teachers_table(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
 
-  if (createTimetableTable(db) != SQLITE_SUCCESS) {
+  if (create_timetable_table(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
@@ -95,7 +95,7 @@ Error createDatabase(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
-Error addWard(sqlite3 *db, Ward ward) {
+Error add_ward(sqlite3 *db, Ward ward) {
   const char *sql = "INSERT INTO wards(class_id, full, class_number, tag) "
                     "VALUES (?, ?, ?, ?)";
   sqlite3_stmt *stmt;
@@ -121,7 +121,7 @@ Error addWard(sqlite3 *db, Ward ward) {
   return SQLITE_SUCCESS;
 }
 
-Error addTeacher(sqlite3 *db, Teacher teacher) {
+Error add_teacher(sqlite3 *db, Teacher teacher) {
   const char *sql = "INSERT INTO teachers(teacher_id, name, initials) "
                     "VALUES (?, ?, ?)";
   sqlite3_stmt *stmt;
@@ -146,7 +146,7 @@ Error addTeacher(sqlite3 *db, Teacher teacher) {
   return SQLITE_SUCCESS;
 }
 
-Error addLesson(sqlite3 *db, Lesson lesson) {
+Error add_lesson(sqlite3 *db, Lesson lesson) {
   const char *sql =
       "INSERT INTO timetable(class_id, teacher_id, \"order\", hours, "
       "lesson_name, classroom, weekday) "

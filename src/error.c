@@ -2,7 +2,7 @@
 
 void (*globalErrorCallback)(const char *);
 
-const char *errorToString(Error err) {
+const char *error_to_string(Error err) {
   switch (err) {
   case SQLITE_SUCCESS:
     return "OK: Operation completed successfully";
