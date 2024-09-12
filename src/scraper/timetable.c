@@ -291,10 +291,10 @@ Error parse_timetable(xmlXPathContextPtr context, LessonArray *lesson,
   return TIMETABLE_OK;
 }
 
-Error get_timetable(LessonArray *lesson_list, int i, Ward *ward,
-                    CURL *curl_handle) {
+Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
+                    Ward *ward, CURL *curl_handle, char *generation_date) {
   char timetable_path[100];
-  sprintf(timetable_path, "http://zstrzeszow.pl/plan/plany/%s.html", ward->id);
+  sprintf(timetable_path, "%s/plany/%s.html", timetable_url, ward->id);
   CURLResponse response = get_request(curl_handle, timetable_path);
 
   // parse the HTML document returned by the server
@@ -302,14 +302,13 @@ Error get_timetable(LessonArray *lesson_list, int i, Ward *ward,
                                   NULL, NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
-  // TODO: Do something with that
-  char generationDate[100];
-  if (get_generation_date(context, generationDate) != TIMETABLE_OK) {
+  if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
     fprintf(stderr, "ERROR: Failed getting generation date\n");
   }
 
-  char validDate[100];
-  if (get_valid_date(context, validDate) != TIMETABLE_OK) {
+  // TODO: Do something with that
+  char valid_date[100];
+  if (get_valid_date(context, valid_date) != TIMETABLE_OK) {
     fprintf(stderr, "ERROR: Failed getting valid from date\n");
   }
 

@@ -12,6 +12,10 @@ const char *error_to_string(Error err) {
     return "OK: Successfully parsed timetable";
   case TIMETABLE_ERROR:
     return "ERROR: Failed parsing timetable";
+  case SCRAPER_OK:
+    return "OK: Successfully scraped website";
+  case SCRAPER_ERROR:
+    return "ERROR: Failed scraping website";
   default:
     return "ERROR: Unknown error.";
   }

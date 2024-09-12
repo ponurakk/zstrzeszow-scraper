@@ -11,6 +11,7 @@
 
 typedef struct Lesson Lesson;
 
-Error get_timetable(LessonArray *lesson, int i, Ward *ward, CURL *curl_handle);
+Error get_timetable(LessonArray *lesson, int i, char *timetable_url, Ward *ward,
+                    CURL *curl_handle, char *generation_date);
 
 #endif // !TIMETABLE_H

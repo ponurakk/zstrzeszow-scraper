@@ -1,7 +1,12 @@
 #include "main.h"
+#include "database.h"
 #include "scraper/timetable.h"
+#include "utils/error.h"
 #include <libxml/HTMLparser.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
                                   void *userp) {
@@ -52,33 +57,40 @@ CURLResponse get_request(CURL *curl_handle, const char *url) {
   return response;
 }
 
-int main() {
-  sqlite3 *db;
+int save_in_memory_to_file(sqlite3 *in_memory_db, const char *filename) {
+  sqlite3 *file_db;
+  sqlite3_backup *backup;
+  int rc;
+
+  rc = sqlite3_open(filename, &file_db);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "Cannot open file-based database: %s\n",
+            sqlite3_errmsg(file_db));
+    return rc;
+  }
+
+  backup = sqlite3_backup_init(file_db, "main", in_memory_db, "main");
+  if (backup) {
+    sqlite3_backup_step(backup, -1);
+    sqlite3_backup_finish(backup);
+  }
+
+  rc = sqlite3_errcode(file_db);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "Error occurred during backup: %s\n",
+            sqlite3_errmsg(file_db));
+  }
+
+  sqlite3_close(file_db);
+
+  return rc;
+}
+
+Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   Error err;
-
-  int rc = sqlite3_open(":memory:", &db);
-
-  if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
-    sqlite3_close(db);
-    exit(1);
-  }
-
-  err = create_database(db);
-
-  if (err != SQLITE_SUCCESS) {
-    fprintf(stderr, "%s\n", error_to_string(err));
-    exit(1);
-  }
-
-  // initialize curl globally
-  curl_global_init(CURL_GLOBAL_ALL);
-
-  // initialize a CURL instance
-  CURL *curl_handle = curl_easy_init();
-
-  // get the HTML document associated with the page
-  CURLResponse response =
-      get_request(curl_handle, "http://zstrzeszow.pl/plan/lista.html");
+  char list_url[100];
+  sprintf(list_url, "%s/lista.html", timetable_url);
+  CURLResponse response = get_request(curl_handle, list_url);
 
   // parse the HTML document returned by the server
   htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
@@ -103,7 +115,7 @@ int main() {
     err = add_ward(db, ward_list[i]);
     if (err != SQLITE_SUCCESS) {
       fprintf(stderr, "%s\n", error_to_string(err));
-      exit(1);
+      return SCRAPER_ERROR;
     }
   }
 
@@ -117,7 +129,7 @@ int main() {
     err = add_teacher(db, teacher_list[i]);
     if (err != SQLITE_SUCCESS) {
       fprintf(stderr, "%s\n", error_to_string(err));
-      exit(1);
+      return SCRAPER_ERROR;
     }
   }
 
@@ -125,13 +137,15 @@ int main() {
 
   LessonArray lesson_list;
   arrayInit(&lesson_list, 50);
+  char generation_date[100];
 
   printf("INFO: Parsing timetable\n");
   for (int i = 0; i < ward_list_size; ++i) {
-    err = get_timetable(&lesson_list, i, &ward_list[i], curl_handle);
+    err = get_timetable(&lesson_list, i, timetable_url, &ward_list[i],
+                        curl_handle, generation_date);
     if (err != TIMETABLE_OK) {
       fprintf(stderr, "%s\n", error_to_string(err));
-      exit(1);
+      return SCRAPER_ERROR;
     }
   }
 
@@ -141,16 +155,55 @@ int main() {
     add_lesson(db, lesson_list.array[i]);
   }
 
-  // free up the allocated resources
+  struct stat stats;
+  stat("backup", &stats);
+  if (!S_ISDIR(stats.st_mode))
+    mkdir("backup", 0755);
+
+  char backup_name[100];
+  sprintf(backup_name, "backup/%s.db", generation_date);
+  save_in_memory_to_file(db, backup_name);
+
   free(response.html);
   xmlXPathFreeContext(context);
   xmlFreeDoc(doc);
-  xmlCleanupParser();
   arrayFree(&lesson_list);
 
-  // cleanup the curl instance
+  return SCRAPER_OK;
+}
+
+int main() {
+  sqlite3 *db;
+  Error err;
+
+  int rc = sqlite3_open(":memory:", &db);
+
+  if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    exit(1);
+  }
+
+  err = create_database(db);
+
+  if (err != SQLITE_SUCCESS) {
+    fprintf(stderr, "%s\n", error_to_string(err));
+    exit(1);
+  }
+
+  curl_global_init(CURL_GLOBAL_ALL);
+  CURL *curl_handle = curl_easy_init();
+  char *timetable_url = "http://zstrzeszow.pl/plan";
+
+  err = fetch_timetable(curl_handle, db, timetable_url);
+  if (err != SCRAPER_OK) {
+    exit(1);
+    xmlCleanupParser();
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
+  }
+
+  xmlCleanupParser();
   curl_easy_cleanup(curl_handle);
-  // cleanup the curl resources
   curl_global_cleanup();
 
   return 0;
