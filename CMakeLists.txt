@@ -7,6 +7,7 @@ set(SOURCE_FILES
   src/main.c
   src/utils/error.c
   src/utils/array.c
+  src/utils/cellmap.c
   src/scraper/list.c
   src/scraper/timetable.c
   src/database.c

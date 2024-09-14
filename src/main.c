@@ -2,12 +2,19 @@
 #include "database.h"
 #include "scraper/timetable.h"
 #include "server/listener.h"
+#include "utils/array.h"
+#include "utils/cellmap.h"
 #include "utils/error.h"
 #include <libxml/HTMLparser.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+int callback(void *data, int argc, char **argv, char **azColName);
+void print();
+
+CellMap *cellmapG;
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
                                   void *userp) {
@@ -173,45 +180,99 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   return SCRAPER_OK;
 }
 
+void print_pair(Cell key, LessonArray val) {
+  printf("Cell (%d, %d):\tLessons Size: %zu\n", key.x, key.y, val.count);
+}
+
 int main() {
   sqlite3 *db;
   Error err;
+  cellmapG = cellmap_init();
 
   int rc = sqlite3_open(":memory:", &db);
 
   if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
     sqlite3_close(db);
-    exit(1);
+    return 1;
   }
 
   err = create_database(db);
 
   if (err != SQLITE_SUCCESS) {
     fprintf(stderr, "%s\n", error_to_string(err));
-    exit(1);
+    return 1;
   }
 
   curl_global_init(CURL_GLOBAL_ALL);
   CURL *curl_handle = curl_easy_init();
   char *timetable_url = "http://zstrzeszow.pl/plan";
 
-  err = fetch_timetable(curl_handle, db, timetable_url);
-  if (err != SCRAPER_OK) {
-    exit(1);
-    xmlCleanupParser();
-    curl_easy_cleanup(curl_handle);
-    curl_global_cleanup();
+  // err = fetch_timetable(curl_handle, db, timetable_url);
+  // if (err != SCRAPER_OK) {
+  //   return 1;
+  //   xmlCleanupParser();
+  //   curl_easy_cleanup(curl_handle);
+  //   curl_global_cleanup();
+  // }
+
+  sqlite3_stmt *res;
+  rc = sqlite3_exec(db,
+                    "SELECT \"order\", hours, lesson_name, teacher_id, "
+                    "classroom, weekday FROM timetable WHERE class_id = \"o1\" "
+                    "ORDER BY \"order\" ASC, weekday ASC",
+                    callback, &res, 0);
+
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "Failed to select data\n");
+    sqlite3_close(db);
+    return 1;
   }
+
+  printf("%u\n", cellmapG->len);
+  printf("%u\n", cellmapG->cap);
+
+  cellmap_iterate(cellmapG, print_pair);
 
   err = server();
   if (err != WEB_SERVER_OK) {
     fprintf(stderr, "ERROR: Failed launching web server");
-    exit(1);
+    return 1;
   }
 
   xmlCleanupParser();
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
+
+  return 0;
+}
+
+void insert(LessonArray *lesson_array) {}
+
+int callback(void *data, int argc, char **argv, char **azColName) {
+  Error err;
+
+  Lesson lesson = {
+      .order = atoi(argv[0]),
+      .hours = strdup(argv[1]),
+      .lesson_name = strdup(argv[2]),
+      .teacher_id = strdup(argv[3]),
+      .classroom = strdup(argv[4]),
+      .weekday = atoi(argv[5]),
+  };
+
+  Cell cell = {.x = lesson.order, .y = lesson.weekday};
+
+  LessonArray out;
+
+  err = cellmap_get(cellmapG, cell, &out);
+  if (err != HASHMAP_OPERATION_OK) {
+    LessonArray new;
+    arrayInit(&new, 8);
+    arrayPush(&new, lesson);
+    cellmap_set(cellmapG, cell, new);
+  } else {
+    cellmap_insert_or_push(cellmapG, cell, out, lesson);
+  }
 
   return 0;
 }

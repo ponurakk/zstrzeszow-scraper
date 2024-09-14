@@ -146,14 +146,13 @@ Error parse_3_spans(xmlXPathContextPtr context, Lesson *l, int i) {
 Error parse_lesson(xmlNodePtr lesson_cell, xmlXPathContextPtr context,
                    LessonArray *lesson_list, int order, char *hours,
                    char *ward_id, int weekday) {
-  Lesson l;
-  l.hours = strdup(hours);
-  l.order = order;
-  l.lesson_name = "";
-  l.classroom = "";
-  l.teacher_id = "";
-  l.class_id = strdup(ward_id);
-  l.weekday = weekday;
+  Lesson l = {.hours = strdup(hours),
+              .order = order,
+              .lesson_name = "",
+              .classroom = "",
+              .teacher_id = "",
+              .class_id = strdup(ward_id),
+              .weekday = weekday};
 
   if (lesson_cell == NULL) {
     fprintf(stderr, "ERROR: lessonCell is NULL\n");
