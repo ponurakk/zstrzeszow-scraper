@@ -207,13 +207,13 @@ int main() {
   CURL *curl_handle = curl_easy_init();
   char *timetable_url = "http://zstrzeszow.pl/plan";
 
-  // err = fetch_timetable(curl_handle, db, timetable_url);
-  // if (err != SCRAPER_OK) {
-  //   return 1;
-  //   xmlCleanupParser();
-  //   curl_easy_cleanup(curl_handle);
-  //   curl_global_cleanup();
-  // }
+  err = fetch_timetable(curl_handle, db, timetable_url);
+  if (err != SCRAPER_OK) {
+    return 1;
+    xmlCleanupParser();
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
+  }
 
   sqlite3_stmt *res;
   rc = sqlite3_exec(db,
