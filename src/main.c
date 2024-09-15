@@ -235,39 +235,57 @@ int main() {
   cellmap_collect(cellmapG, items, &item_count);
   qsort(items, item_count, sizeof(Item), compare_cells);
 
+  char res[10000] = "\0";
+  int res_size = sizeof(res);
+
+  for (int i = 1; i < items[0].key.x; ++i) {
+    snprintf(res + strlen(res), res_size - strlen(res),
+             "<tr class=\"border-b border-gray\"> <td class=\"py-4 "
+             "px-6\">%i</td><td class=\"py-4 px-6\"></td>",
+             i);
+    for (int j = 0; j < 5; ++j) {
+      snprintf(res + strlen(res), res_size - strlen(res),
+               "<td class=\"py-4 px-6\"></td>");
+    }
+    snprintf(res + strlen(res), res_size - strlen(res), "</tr>");
+  }
+
   for (int i = 0; i < item_count; ++i) {
     if (items[i - 1].key.x != items[i].key.x) {
-      printf("<tr class=\"border-b border-gray\">");
+      snprintf(res + strlen(res), res_size - strlen(res),
+               "<tr class=\"border-b border-gray\">");
     }
 
     LessonArray cell_array = items[i].val;
     if (items[i - 1].key.x != items[i].key.x) {
-      printf("<td class=\"py-4 px-6\">%i</td>", cell_array.array[0].order);
-      printf("<td class=\"py-4 px-6\">%s</td>", cell_array.array[0].hours);
+      snprintf(res + strlen(res), res_size - strlen(res),
+               "<td class=\"py-4 px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
+               cell_array.array[0].order, cell_array.array[0].hours);
       for (int j = 0; j < items[i].key.y; ++j) {
-        printf("<td class=\"py-4 px-6\"></td>");
+        snprintf(res + strlen(res), res_size - strlen(res),
+                 "<td class=\"py-4 px-6\"></td>");
       }
     }
 
-    printf("<td class=\"py-4 px-6\">");
+    snprintf(res + strlen(res), res_size - strlen(res),
+             "<td class=\"py-4 px-6\">");
     for (int j = 0; j < cell_array.count; ++j) {
-      printf("<span>");
-      printf("%s ", cell_array.array[j].lesson_name);
-      printf("%s ", cell_array.array[j].teacher_id);
-      printf("%s", cell_array.array[j].classroom);
-      printf("</span>");
-      printf("<br/>");
+      snprintf(res + strlen(res), res_size - strlen(res),
+               "<span>%s %s %s</span><br/>", cell_array.array[j].lesson_name,
+               cell_array.array[j].teacher_id, cell_array.array[j].classroom);
     }
-    printf("</td>");
+    snprintf(res + strlen(res), res_size - strlen(res), "</td>");
 
     if (items[i].key.x != items[i + 1].key.x) {
       for (int j = items[i].key.y; j < 4; ++j) {
-        printf("<td class=\"py-4 px-6\"></td>");
+        snprintf(res + strlen(res), res_size - strlen(res),
+                 "<td class=\"py-4 px-6\"></td>");
       }
-      printf("</tr>");
+      snprintf(res + strlen(res), res_size - strlen(res), "</tr>");
     }
   }
   printf("\n");
+  printf("\n%s\n", res);
 
   err = server();
   if (err != WEB_SERVER_OK) {
