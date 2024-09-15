@@ -14,8 +14,6 @@
 int callback(void *data, int argc, char **argv, char **azColName);
 void print();
 
-CellMap *cellmapG;
-
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
                                   void *userp) {
   size_t realsize = size * nmemb;
@@ -187,7 +185,6 @@ void print_pair(Cell key, LessonArray val) {
 int main() {
   sqlite3 *db;
   Error err;
-  cellmapG = cellmap_init();
 
   int rc = sqlite3_open(":memory:", &db);
 
@@ -215,12 +212,14 @@ int main() {
     curl_global_cleanup();
   }
 
-  sqlite3_stmt *res;
-  rc = sqlite3_exec(db,
-                    "SELECT \"order\", hours, lesson_name, teacher_id, "
-                    "classroom, weekday FROM timetable WHERE class_id = \"o1\" "
-                    "ORDER BY \"order\" ASC, weekday ASC",
-                    callback, &res, 0);
+
+  CellMap *cellmapG = cellmap_init();
+  rc = sqlite3_exec(
+      db,
+      "SELECT \"order\", hours, lesson_name, teacher_id, "
+      "classroom, weekday FROM timetable WHERE teacher_id = \"xK\" "
+      "ORDER BY \"order\" ASC, weekday ASC",
+      callback, &cellmapG, 0);
 
   if (rc != SQLITE_OK) {
     fprintf(stderr, "Failed to select data\n");
@@ -231,7 +230,45 @@ int main() {
   printf("%u\n", cellmapG->len);
   printf("%u\n", cellmapG->cap);
 
-  cellmap_iterate(cellmapG, print_pair);
+  int item_count = cellmapG->len;
+  Item *items = malloc(item_count * sizeof(Item));
+
+  cellmap_collect(cellmapG, items, &item_count);
+  qsort(items, item_count, sizeof(Item), compare_cells);
+
+  for (int i = 0; i < item_count; ++i) {
+    if (items[i - 1].key.x != items[i].key.x) {
+      printf("<tr class=\"border-b border-gray\">");
+    }
+
+    LessonArray cell_array = items[i].val;
+    if (items[i - 1].key.x != items[i].key.x) {
+      printf("<td class=\"py-4 px-6\">%i</td>", cell_array.array[0].order);
+      printf("<td class=\"py-4 px-6\">%s</td>", cell_array.array[0].hours);
+      for (int j = 0; j < items[i].key.y; ++j) {
+        printf("<td class=\"py-4 px-6\"></td>");
+      }
+    }
+
+    printf("<td class=\"py-4 px-6\">");
+    for (int j = 0; j < cell_array.count; ++j) {
+      printf("<span>");
+      printf("%s ", cell_array.array[j].lesson_name);
+      printf("%s ", cell_array.array[j].teacher_id);
+      printf("%s", cell_array.array[j].classroom);
+      printf("</span>");
+      printf("<br/>");
+    }
+    printf("</td>");
+
+    if (items[i].key.x != items[i + 1].key.x) {
+      for (int j = items[i].key.y; j < 4; ++j) {
+        printf("<td class=\"py-4 px-6\"></td>");
+      }
+      printf("</tr>");
+    }
+  }
+  printf("\n");
 
   err = server();
   if (err != WEB_SERVER_OK) {
@@ -246,9 +283,8 @@ int main() {
   return 0;
 }
 
-void insert(LessonArray *lesson_array) {}
-
 int callback(void *data, int argc, char **argv, char **azColName) {
+  CellMap **cellmapG = (CellMap **)data;
   Error err;
 
   Lesson lesson = {
@@ -264,14 +300,14 @@ int callback(void *data, int argc, char **argv, char **azColName) {
 
   LessonArray out;
 
-  err = cellmap_get(cellmapG, cell, &out);
+  err = cellmap_get(*cellmapG, cell, &out);
   if (err != HASHMAP_OPERATION_OK) {
     LessonArray new;
     arrayInit(&new, 8);
     arrayPush(&new, lesson);
-    cellmap_set(cellmapG, cell, new);
+    cellmap_set(*cellmapG, cell, new);
   } else {
-    cellmap_insert_or_push(cellmapG, cell, out, lesson);
+    cellmap_insert_or_push(*cellmapG, cell, out, lesson);
   }
 
   return 0;

@@ -1,6 +1,7 @@
 #include "cellmap.h"
 #include "array.h"
 #include "error.h"
+#include <stdio.h>
 
 CellMap *cellmap_init() {
   CellMap *cellmap = malloc(sizeof(*cellmap));
@@ -35,7 +36,7 @@ void cellmap_resize(CellMap *cellmap) {
   Pair **new_list = calloc(new_cap, sizeof(Pair *)); // Allocate new list
 
   // Rehash all existing pairs
-  for (uint i = 0; i < cellmap->cap; i++) {
+  for (uint i = 0; i < cellmap->cap; ++i) {
     Pair *current = cellmap->list[i];
     while (current) {
       Pair *next = current->next; // Save the next node in the chain
@@ -102,8 +103,39 @@ void cellmap_insert_or_push(CellMap *cellmap, Cell key, LessonArray val,
   cellmap->len++;
 }
 
-void cellmap_iterate(CellMap *cellmap, void (*callback)(Cell, LessonArray)) {
+void collect_pairs(Cell key, LessonArray val, Item *items, int *index) {
+  items[*index].key = key;
+  items[*index].val = val;
+  (*index)++;
+}
+
+void cellmap_collect(CellMap *cellmap, Item *items, int *item_count) {
+  int index = 0;
   for (unsigned i = 0; i < cellmap->cap; i++) {
+    Pair *current = cellmap->list[i];
+    while (current) {
+      collect_pairs(current->key, current->val, items, &index);
+      current = current->next;
+    }
+  }
+  *item_count = index; // Update the total item count
+}
+
+// Comparison function to sort by Cell keys (x first, then y)
+int compare_cells(const void *a, const void *b) {
+  const Item *item1 = (const Item *)a;
+  const Item *item2 = (const Item *)b;
+
+  if (item1->key.x != item2->key.x) {
+    return item1->key.x - item2->key.x; // Sort by x-coordinate first
+  } else {
+    return item1->key.y -
+           item2->key.y; // If x is the same, sort by y-coordinate
+  }
+}
+
+void cellmap_iterate(CellMap *cellmap, void (*callback)(Cell, LessonArray)) {
+  for (int i = 0; i < cellmap->cap; ++i) {
     Pair *current = cellmap->list[i]; // Start at each bucket
     while (current) {
       // Call the callback function for each key-value pair
