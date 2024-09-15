@@ -1,7 +1,6 @@
 #include "cellmap.h"
 #include "array.h"
 #include "error.h"
-#include <stdio.h>
 
 CellMap *cellmap_init() {
   CellMap *cellmap = malloc(sizeof(*cellmap));

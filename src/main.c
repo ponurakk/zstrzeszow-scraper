@@ -5,6 +5,8 @@
 #include "utils/array.h"
 #include "utils/cellmap.h"
 #include "utils/error.h"
+#include "utils/logger.h"
+#include <curl/curl.h>
 #include <libxml/HTMLparser.h>
 #include <stdio.h>
 #include <string.h>
@@ -57,7 +59,7 @@ CURLResponse get_request(CURL *curl_handle, const char *url) {
 
   // check for HTTP errors
   if (res != CURLE_OK) {
-    fprintf(stderr, "GET request failed: %s\n", curl_easy_strerror(res));
+    print_error("GET request failed: %s", curl_easy_strerror(res));
   }
 
   return response;
@@ -70,8 +72,7 @@ int save_in_memory_to_file(sqlite3 *in_memory_db, const char *filename) {
 
   rc = sqlite3_open(filename, &file_db);
   if (rc != SQLITE_OK) {
-    fprintf(stderr, "Cannot open file-based database: %s\n",
-            sqlite3_errmsg(file_db));
+    print_error("Cannot open file-based database: %s", sqlite3_errmsg(file_db));
     return rc;
   }
 
@@ -83,8 +84,7 @@ int save_in_memory_to_file(sqlite3 *in_memory_db, const char *filename) {
 
   rc = sqlite3_errcode(file_db);
   if (rc != SQLITE_OK) {
-    fprintf(stderr, "Error occurred during backup: %s\n",
-            sqlite3_errmsg(file_db));
+    print_error("Error occurred during backup: %s", sqlite3_errmsg(file_db));
   }
 
   sqlite3_close(file_db);
@@ -112,7 +112,7 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   Ward ward_list[ward_html_elements->nodesetval->nodeNr];
   Teacher teacher_list[teachers_html_elements->nodesetval->nodeNr];
 
-  printf("INFO: Parsing wards list\n");
+  print_info("Parsing wards list");
   for (int i = 0; i < ward_html_elements->nodesetval->nodeNr; ++i) {
     xmlNodePtr ward_html_element = ward_html_elements->nodesetval->nodeTab[i];
     get_ward_list(ward_list, ward_html_element, context, i);
@@ -120,12 +120,12 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
 
     err = add_ward(db, ward_list[i]);
     if (err != SQLITE_SUCCESS) {
-      fprintf(stderr, "%s\n", error_to_string(err));
+      print_error("%s", error_to_string(err));
       return SCRAPER_ERROR;
     }
   }
 
-  printf("INFO: Parsing teachers list\n");
+  print_info("Parsing teachers list");
   for (int i = 0; i < teachers_html_elements->nodesetval->nodeNr; ++i) {
     xmlNodePtr teacher_html_element =
         teachers_html_elements->nodesetval->nodeTab[i];
@@ -134,7 +134,7 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
 
     err = add_teacher(db, teacher_list[i]);
     if (err != SQLITE_SUCCESS) {
-      fprintf(stderr, "%s\n", error_to_string(err));
+      print_error("%s", error_to_string(err));
       return SCRAPER_ERROR;
     }
   }
@@ -145,19 +145,19 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   arrayInit(&lesson_list, 50);
   char generation_date[100];
 
-  printf("INFO: Parsing timetable\n");
+  print_info("Parsing timetable");
   for (int i = 0; i < ward_list_size; ++i) {
     err = get_timetable(&lesson_list, i, timetable_url, &ward_list[i],
                         curl_handle, generation_date);
     if (err != TIMETABLE_OK) {
-      fprintf(stderr, "%s\n", error_to_string(err));
+      print_error("%s", error_to_string(err));
       return SCRAPER_ERROR;
     }
   }
 
   for (int i = 0; i < lesson_list.count; ++i) {
-    printf("INFO: Adding lesson %s from class %s to database\n",
-           lesson_list.array[i].lesson_name, lesson_list.array[i].class_id);
+    print_info("Adding lesson %s from class %s to database",
+               lesson_list.array[i].lesson_name, lesson_list.array[i].class_id);
     add_lesson(db, lesson_list.array[i]);
   }
 
@@ -179,7 +179,7 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
 }
 
 void print_pair(Cell key, LessonArray val) {
-  printf("Cell (%d, %d):\tLessons Size: %zu\n", key.x, key.y, val.count);
+  print_info("Cell (%d, %d):\tLessons Size: %zu", key.x, key.y, val.count);
 }
 
 int main() {
@@ -196,7 +196,7 @@ int main() {
   err = create_database(db);
 
   if (err != SQLITE_SUCCESS) {
-    fprintf(stderr, "%s\n", error_to_string(err));
+    print_error("%s", error_to_string(err));
     return 1;
   }
 
@@ -212,7 +212,6 @@ int main() {
     curl_global_cleanup();
   }
 
-
   CellMap *cellmapG = cellmap_init();
   rc = sqlite3_exec(
       db,
@@ -222,7 +221,7 @@ int main() {
       callback, &cellmapG, 0);
 
   if (rc != SQLITE_OK) {
-    fprintf(stderr, "Failed to select data\n");
+    print_error("Failed to select data");
     sqlite3_close(db);
     return 1;
   }
@@ -272,7 +271,7 @@ int main() {
 
   err = server();
   if (err != WEB_SERVER_OK) {
-    fprintf(stderr, "ERROR: Failed launching web server");
+    print_error("Failed launching web server");
     return 1;
   }
 

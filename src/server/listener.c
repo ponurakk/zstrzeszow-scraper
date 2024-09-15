@@ -1,4 +1,5 @@
 #include "../utils/error.h"
+#include "../utils/logger.h"
 #include "handler.h"
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -40,7 +41,7 @@ Error server() {
     return WEB_SERVER_ERROR;
   }
 
-  printf("INFO: Server listening on :%i\n", 3000);
+  print_info("Server listening on :%i", 3000);
   int c = sizeof(struct sockaddr_in);
   int new_socket;
   struct sockaddr_in client;
@@ -51,8 +52,8 @@ Error server() {
       continue;
     }
 
-    printf("INFO: Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr),
-           ntohs(client.sin_port));
+    print_info("Connection accepted from %s:%d", inet_ntoa(client.sin_addr),
+               ntohs(client.sin_port));
 
     err = handle_client(new_socket);
     if (err != WEB_SERVER_OK) {

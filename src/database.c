@@ -1,16 +1,17 @@
 #include "scraper/list.h"
 #include "utils/array.h"
 #include "utils/error.h"
+#include "utils/logger.h"
 #include <sqlite3.h>
 
 Error sqlite_result(sqlite3 *db, int rc, const char *success_message) {
   if (rc == SQLITE_OK || rc == SQLITE_DONE || rc == SQLITE_ROW) {
     if (success_message != NULL) {
-      fprintf(stderr, "INFO: %s\n", success_message);
+      print_info("%s", success_message);
     }
     return SQLITE_SUCCESS;
   } else {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s\n", sqlite3_errmsg(db));
   }
 
   return SQLITE_ERROR;
@@ -100,7 +101,7 @@ Error add_ward(sqlite3 *db, Ward ward) {
   sqlite3_stmt *stmt;
 
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s\n", sqlite3_errmsg(db));
     return SQLITE_ERROR;
   }
 
@@ -110,7 +111,7 @@ Error add_ward(sqlite3 *db, Ward ward) {
   sqlite3_bind_text(stmt, 4, ward.tag, -1, SQLITE_STATIC);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s\n", sqlite3_errmsg(db));
     sqlite3_finalize(stmt);
     return SQLITE_ERROR;
   }
@@ -126,7 +127,7 @@ Error add_teacher(sqlite3 *db, Teacher teacher) {
   sqlite3_stmt *stmt;
 
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s\n", sqlite3_errmsg(db));
     return SQLITE_ERROR;
   }
 
@@ -135,7 +136,7 @@ Error add_teacher(sqlite3 *db, Teacher teacher) {
   sqlite3_bind_text(stmt, 3, teacher.initials, -1, SQLITE_STATIC);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s\n", sqlite3_errmsg(db));
     sqlite3_finalize(stmt);
     return SQLITE_ERROR;
   }
@@ -153,7 +154,7 @@ Error add_lesson(sqlite3 *db, Lesson lesson) {
   sqlite3_stmt *stmt;
 
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s", sqlite3_errmsg(db));
     return SQLITE_ERROR;
   }
 
@@ -166,7 +167,7 @@ Error add_lesson(sqlite3 *db, Lesson lesson) {
   sqlite3_bind_int(stmt, 7, lesson.weekday);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
-    fprintf(stderr, "ERROR: SQL error: %s\n", sqlite3_errmsg(db));
+    print_error("SQL error: %s", sqlite3_errmsg(db));
     sqlite3_finalize(stmt);
     return SQLITE_ERROR;
   }

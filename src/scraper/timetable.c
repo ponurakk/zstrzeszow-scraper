@@ -1,5 +1,6 @@
 #include "timetable.h"
 #include "../main.h"
+#include "../utils/logger.h"
 #include <ctype.h>
 #include <libxml2/libxml/HTMLparser.h>
 #include <string.h>
@@ -10,7 +11,7 @@ Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
 
   if (footer == NULL || footer->nodesetval == NULL ||
       footer->nodesetval->nodeNr == 0) {
-    fprintf(stderr, "ERROR: Failed getting footer\n");
+    print_error("Failed getting footer");
     return TIMETABLE_ERROR;
   }
 
@@ -19,14 +20,14 @@ Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
 
   if (footer_text == NULL) {
     xmlXPathFreeObject(footer);
-    fprintf(stderr, "ERROR: Failed freeing generation date\n");
+    print_error("Failed freeing generation date");
     return TIMETABLE_ERROR;
   }
 
   if (sscanf(footer_text, "\nwygenerowano %10s", generation_date) != 1) {
     xmlFree(footer_text);
     xmlXPathFreeObject(footer);
-    fprintf(stderr, "ERROR: Failed parsing generation date\n");
+    print_error("Failed parsing generation date");
     return TIMETABLE_ERROR;
   }
 
@@ -41,7 +42,7 @@ Error get_valid_date(xmlXPathContextPtr context, char *valid_date) {
 
   if (footer == NULL || footer->nodesetval == NULL ||
       footer->nodesetval->nodeNr == 0) {
-    fprintf(stderr, "ERROR: Failed getting footer\n");
+    print_error("Failed getting footer");
     return TIMETABLE_ERROR;
   }
 
@@ -50,7 +51,7 @@ Error get_valid_date(xmlXPathContextPtr context, char *valid_date) {
 
   if (footer_text == NULL) {
     xmlXPathFreeObject(footer);
-    fprintf(stderr, "ERROR: Failed freeing generation date\n");
+    print_error("Failed freeing generation date");
     return TIMETABLE_ERROR;
   }
 
@@ -59,7 +60,7 @@ Error get_valid_date(xmlXPathContextPtr context, char *valid_date) {
              &year) != 3) {
     xmlFree(footer_text);
     xmlXPathFreeObject(footer);
-    fprintf(stderr, "ERROR: Failed parsing valid from date\n");
+    print_error("Failed parsing valid from date");
     return TIMETABLE_ERROR;
   }
 
@@ -155,12 +156,12 @@ Error parse_lesson(xmlNodePtr lesson_cell, xmlXPathContextPtr context,
               .weekday = weekday};
 
   if (lesson_cell == NULL) {
-    fprintf(stderr, "ERROR: lessonCell is NULL\n");
+    print_error("lessonCell is NULL");
     return TIMETABLE_ERROR;
   }
 
   if (xmlXPathSetContextNode(lesson_cell, context) != 0) {
-    fprintf(stderr, "ERROR: Failed to set context node\n");
+    print_error("Failed to set context node");
     return TIMETABLE_ERROR;
   }
 
@@ -177,7 +178,6 @@ Error parse_lesson(xmlNodePtr lesson_cell, xmlXPathContextPtr context,
     if (strcmp(l.lesson_name, " ")) {
       arrayPush(lesson_list, l);
     }
-    // fprintf(stderr, "ERROR: XPath expression returned no results\n");
     return TIMETABLE_OK;
   }
 
@@ -190,7 +190,6 @@ Error parse_lesson(xmlNodePtr lesson_cell, xmlXPathContextPtr context,
     parse_3_spans(context, &l, 0);
     arrayPush(lesson_list, l);
   } else if (count >= 6) { // Two groups or more
-    // TODO: it iters correctly but always gets first element
     for (int i = 0; i < count / 3; ++i) {
       parse_3_spans(context, &l, i);
       arrayPush(lesson_list, l);
@@ -268,7 +267,7 @@ Error parse_row(xmlNodePtr row, xmlXPathContextPtr context,
 
 Error parse_timetable(xmlXPathContextPtr context, LessonArray *lesson,
                       char *ward_id) {
-  printf("INFO: Parsing timetable %s\n", ward_id);
+  print_info("Parsing timetable %s", ward_id);
   xmlXPathObjectPtr rows = xmlXPathEvalExpression(
       (xmlChar *)"//div/table/tr[1]/td/table/tr", context);
 
@@ -302,17 +301,17 @@ Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
   if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
-    fprintf(stderr, "ERROR: Failed getting generation date\n");
+    print_error("Failed getting generation date");
   }
 
   // TODO: Do something with that
   char valid_date[100];
   if (get_valid_date(context, valid_date) != TIMETABLE_OK) {
-    fprintf(stderr, "ERROR: Failed getting valid from date\n");
+    print_error("Failed getting valid from date");
   }
 
   if (parse_timetable(context, lesson_list, ward->id) != TIMETABLE_OK) {
-    fprintf(stderr, "ERROR: Failed parsing timetable\n");
+    print_error("Failed parsing timetable");
     return TIMETABLE_ERROR;
   }
 

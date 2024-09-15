@@ -1,4 +1,5 @@
 #include "list.h"
+#include "../utils/logger.h"
 #include <string.h>
 
 void get_ward_list(Ward *ward_list, xmlNodePtr ward_html_element,
@@ -10,7 +11,7 @@ void get_ward_list(Ward *ward_list, xmlNodePtr ward_html_element,
 
   char *a_href = (char *)xmlGetProp(url_html_element, (xmlChar *)"href");
   if (a_href == NULL) {
-    fprintf(stderr, "Failed to get href property.\n");
+    print_error("Failed to get href property.");
     return;
   }
 
@@ -42,7 +43,7 @@ void get_teachers_list(Teacher *teacher_list, xmlNodePtr ward_html_element,
 
   char *a_href = (char *)xmlGetProp(url_html_element, (xmlChar *)"href");
   if (a_href == NULL) {
-    fprintf(stderr, "Failed to get href property.\n");
+    print_error("Failed to get href property.");
     return;
   }
 

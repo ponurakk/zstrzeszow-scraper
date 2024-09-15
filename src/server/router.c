@@ -1,10 +1,10 @@
-#include <stdio.h>
+#include "../utils/logger.h"
 #include <string.h>
 
 char *path_to_file(char *path) {
   // Debug print statements
-  printf("PATH: '%s', %i, %i\n", path, strcmp(path, "/style.css"),
-         strcmp(path, "/") == 0);
+  print_info("PATH: '%s', %i, %i", path, strcmp(path, "/style.css"),
+             strcmp(path, "/") == 0);
 
   // Use strcmp to compare strings
   if (strcmp(path, "/") == 0) {
