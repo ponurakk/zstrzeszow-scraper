@@ -12,6 +12,8 @@ typedef enum {
   WEB_SERVER_ERROR = 7,
   HASHMAP_OPERATION_OK = 8,
   HASHMAP_NULL = 9,
+  IO_OK = 10,
+  IO_ERROR = 11,
 } Error;
 
 const char *error_to_string(Error err);
