@@ -1,5 +1,6 @@
 #include "../utils/cellmap.h"
 #include "../utils/error.h"
+#include "../utils/hour_util.h"
 #include "../utils/logger.h"
 #include "../utils/str_replace.h"
 #include "router.h"
@@ -123,8 +124,8 @@ Error fetch_table(sqlite3 *db, char **response) {
   for (int i = 1; i < items[0].key.x; ++i) {
     append_to_string(&res, &res_size, &res_used,
                      "<tr class=\"border-b border-gray\"> <td class=\"py-4 "
-                     "px-6\">%i</td><td class=\"py-4 px-6\"></td>",
-                     i);
+                     "px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
+                     i, order_to_hour(i));
     for (int j = 0; j < 5; ++j) {
       append_to_string(&res, &res_size, &res_used,
                        "<td class=\"py-4 px-6\"></td>");
