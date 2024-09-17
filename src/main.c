@@ -204,90 +204,15 @@ int main() {
   CURL *curl_handle = curl_easy_init();
   char *timetable_url = "http://zstrzeszow.pl/plan";
 
-  err = fetch_timetable(curl_handle, db, timetable_url);
-  if (err != SCRAPER_OK) {
-    return 1;
-    xmlCleanupParser();
-    curl_easy_cleanup(curl_handle);
-    curl_global_cleanup();
-  }
+  // err = fetch_timetable(curl_handle, db, timetable_url);
+  // if (err != SCRAPER_OK) {
+  //   return 1;
+  //   xmlCleanupParser();
+  //   curl_easy_cleanup(curl_handle);
+  //   curl_global_cleanup();
+  // }
 
-  CellMap *cellmapG = cellmap_init();
-  rc = sqlite3_exec(
-      db,
-      "SELECT \"order\", hours, lesson_name, teacher_id, "
-      "classroom, weekday FROM timetable WHERE teacher_id = \"xK\" "
-      "ORDER BY \"order\" ASC, weekday ASC",
-      callback, &cellmapG, 0);
-
-  if (rc != SQLITE_OK) {
-    print_error("Failed to select data");
-    sqlite3_close(db);
-    return 1;
-  }
-
-  printf("%u\n", cellmapG->len);
-  printf("%u\n", cellmapG->cap);
-
-  int item_count = cellmapG->len;
-  Item *items = malloc(item_count * sizeof(Item));
-
-  cellmap_collect(cellmapG, items, &item_count);
-  qsort(items, item_count, sizeof(Item), compare_cells);
-
-  char res[10000] = "\0";
-  int res_size = sizeof(res);
-
-  for (int i = 1; i < items[0].key.x; ++i) {
-    snprintf(res + strlen(res), res_size - strlen(res),
-             "<tr class=\"border-b border-gray\"> <td class=\"py-4 "
-             "px-6\">%i</td><td class=\"py-4 px-6\"></td>",
-             i);
-    for (int j = 0; j < 5; ++j) {
-      snprintf(res + strlen(res), res_size - strlen(res),
-               "<td class=\"py-4 px-6\"></td>");
-    }
-    snprintf(res + strlen(res), res_size - strlen(res), "</tr>");
-  }
-
-  for (int i = 0; i < item_count; ++i) {
-    if (items[i - 1].key.x != items[i].key.x) {
-      snprintf(res + strlen(res), res_size - strlen(res),
-               "<tr class=\"border-b border-gray\">");
-    }
-
-    LessonArray cell_array = items[i].val;
-    if (items[i - 1].key.x != items[i].key.x) {
-      snprintf(res + strlen(res), res_size - strlen(res),
-               "<td class=\"py-4 px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
-               cell_array.array[0].order, cell_array.array[0].hours);
-      for (int j = 0; j < items[i].key.y; ++j) {
-        snprintf(res + strlen(res), res_size - strlen(res),
-                 "<td class=\"py-4 px-6\"></td>");
-      }
-    }
-
-    snprintf(res + strlen(res), res_size - strlen(res),
-             "<td class=\"py-4 px-6\">");
-    for (int j = 0; j < cell_array.count; ++j) {
-      snprintf(res + strlen(res), res_size - strlen(res),
-               "<span>%s %s %s</span><br/>", cell_array.array[j].lesson_name,
-               cell_array.array[j].teacher_id, cell_array.array[j].classroom);
-    }
-    snprintf(res + strlen(res), res_size - strlen(res), "</td>");
-
-    if (items[i].key.x != items[i + 1].key.x) {
-      for (int j = items[i].key.y; j < 4; ++j) {
-        snprintf(res + strlen(res), res_size - strlen(res),
-                 "<td class=\"py-4 px-6\"></td>");
-      }
-      snprintf(res + strlen(res), res_size - strlen(res), "</tr>");
-    }
-  }
-  printf("\n");
-  printf("\n%s\n", res);
-
-  err = server();
+  err = server(db);
   if (err != WEB_SERVER_OK) {
     print_error("Failed launching web server");
     return 1;
@@ -296,36 +221,6 @@ int main() {
   xmlCleanupParser();
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
-
-  return 0;
-}
-
-int callback(void *data, int argc, char **argv, char **azColName) {
-  CellMap **cellmapG = (CellMap **)data;
-  Error err;
-
-  Lesson lesson = {
-      .order = atoi(argv[0]),
-      .hours = strdup(argv[1]),
-      .lesson_name = strdup(argv[2]),
-      .teacher_id = strdup(argv[3]),
-      .classroom = strdup(argv[4]),
-      .weekday = atoi(argv[5]),
-  };
-
-  Cell cell = {.x = lesson.order, .y = lesson.weekday};
-
-  LessonArray out;
-
-  err = cellmap_get(*cellmapG, cell, &out);
-  if (err != HASHMAP_OPERATION_OK) {
-    LessonArray new;
-    arrayInit(&new, 8);
-    arrayPush(&new, lesson);
-    cellmap_set(*cellmapG, cell, new);
-  } else {
-    cellmap_insert_or_push(*cellmapG, cell, out, lesson);
-  }
 
   return 0;
 }

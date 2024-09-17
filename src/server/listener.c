@@ -2,10 +2,11 @@
 #include "../utils/logger.h"
 #include "handler.h"
 #include <arpa/inet.h>
+#include <sqlite3.h>
 #include <stdio.h>
 #include <unistd.h>
 
-Error server() {
+Error server(sqlite3 *db) {
   Error err;
   int socket_desc;
   struct sockaddr_in server;
@@ -55,7 +56,7 @@ Error server() {
     print_info("Connection accepted from %s:%d", inet_ntoa(client.sin_addr),
                ntohs(client.sin_port));
 
-    err = handle_client(new_socket);
+    err = handle_client(new_socket, db);
     if (err != WEB_SERVER_OK) {
       continue;
     };

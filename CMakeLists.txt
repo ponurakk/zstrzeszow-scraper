@@ -9,6 +9,7 @@ set(SOURCE_FILES
   src/utils/array.c
   src/utils/cellmap.c
   src/utils/logger.c
+  src/utils/str_replace.c
   src/scraper/list.c
   src/scraper/timetable.c
   src/database.c

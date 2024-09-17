@@ -67,7 +67,7 @@ char *read_file(const char *filename, long *file_size) {
   return file_buffer;
 }
 
-Error get_html(char *file_path, char **file_buffer, long *file_size) {
+Error get_template(char *file_path, char **file_buffer, long *file_size) {
   *file_buffer = read_file(path_to_file(file_path), file_size);
   if (file_buffer == NULL) {
     return IO_ERROR;
