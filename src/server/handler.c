@@ -33,7 +33,7 @@ Error handle_client(int client_socket, sqlite3 *db) {
   strtok(NULL, " ");
 
   if (path == NULL) {
-    printf("Path is null\n");
+    print_error("Path is null");
     close(client_socket);
     return WEB_SERVER_ERROR;
   }
@@ -43,7 +43,6 @@ Error handle_client(int client_socket, sqlite3 *db) {
   char *res;
   fetch_table(db, &res);
   char *replaced = str_replace(file_buffer, "%res%", res);
-  printf("%s\n", res);
 
   respond_http(client_socket, &replaced, strlen(replaced));
 
@@ -101,6 +100,10 @@ Error fetch_table(sqlite3 *db, char **response) {
   }
 
   int item_count = cellmap->len;
+  if (item_count == 0) {
+    return WEB_SERVER_ERROR;
+  }
+
   Item *items = malloc(item_count * sizeof(Item));
 
   cellmap_collect(cellmap, items, &item_count);
@@ -115,7 +118,7 @@ Error fetch_table(sqlite3 *db, char **response) {
     perror("Failed to allocate memory");
     return EXIT_FAILURE;
   }
-  res[0] = '\0'; // Initialize the string
+  res[0] = '\0';
 
   for (int i = 1; i < items[0].key.x; ++i) {
     append_to_string(&res, &res_size, &res_used,
@@ -167,8 +170,8 @@ Error fetch_table(sqlite3 *db, char **response) {
   append_to_string(&res, &res_size, &res_used, "</tr>");
 
   *response = strdup(res);
-  free(res); // Clean up dynamic string buffer
-  return 0;
+  free(res);
+  return WEB_SERVER_OK;
 }
 
 int callback(void *data, int argc, char **argv, char **azColName) {
