@@ -12,9 +12,10 @@
 
 void respond_http(int client_socket, char **html, long file_size);
 char *read_file(const char *filename, long *file_size);
-Error fetch_table(sqlite3 *db, char **res);
+Error fetch_table(sqlite3 *db, char **res, Template templ, char *number);
 
-int callback(void *data, int argc, char **argv, char **azColName);
+// int callback(void *data, int argc, char **argv, char **azColName);
+int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
 
 Error handle_client(int client_socket, sqlite3 *db) {
   char buffer[2048];
@@ -39,13 +40,19 @@ Error handle_client(int client_socket, sqlite3 *db) {
     return WEB_SERVER_ERROR;
   }
   char *file_buffer;
+  Template templ;
   long file_size;
-  get_template(path, &file_buffer, &file_size);
-  char *res;
-  fetch_table(db, &res);
-  char *replaced = str_replace(file_buffer, "%res%", res);
+  char *number;
+  get_template(path, &file_buffer, &file_size, &templ, &number);
+  char *http_reponse = file_buffer;
+  printf("%i\n", templ);
+  if (templ != NONE) {
+    char *res;
+    fetch_table(db, &res, templ, number);
+    http_reponse = str_replace(file_buffer, "%res%", res);
+  }
 
-  respond_http(client_socket, &replaced, strlen(replaced));
+  respond_http(client_socket, &http_reponse, strlen(http_reponse));
 
   return WEB_SERVER_OK;
 }
@@ -85,20 +92,60 @@ void append_to_string(char **str, size_t *size, size_t *used,
   *used += required_size - 1;
 }
 
-Error fetch_table(sqlite3 *db, char **response) {
+Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
+  char *sql;
+  switch (templ) {
+  case WARD:
+    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+          "classroom, weekday FROM timetable WHERE class_id = ? "
+          "ORDER BY \"order\" ASC, weekday ASC";
+    break;
+  case TEACHER:
+    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+          "classroom, weekday FROM timetable WHERE teacher_id = ? "
+          "ORDER BY \"order\" ASC, weekday ASC";
+    break;
+  case CLASSROOM:
+    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+          "classroom, weekday FROM timetable WHERE classroom = ? "
+          "ORDER BY \"order\" ASC, weekday ASC";
+    break;
+  default:
+    return WEB_SERVER_ERROR;
+  }
   CellMap *cellmap = cellmap_init();
-  int rc = sqlite3_exec(
-      db,
-      "SELECT \"order\", hours, lesson_name, teacher_id, "
-      "classroom, weekday FROM timetable WHERE teacher_id = \"xK\" "
-      "ORDER BY \"order\" ASC, weekday ASC",
-      callback, &cellmap, 0);
+
+  sqlite3_stmt *stmt;
+  int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
     return 1;
   }
+
+  sqlite3_bind_text(stmt, 1, number, -1, SQLITE_STATIC);
+
+  while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    int argc = sqlite3_column_count(stmt);
+    char *argv[argc];
+    char *azColName[argc];
+
+    // Collect column names and values
+    for (int i = 0; i < argc; i++) {
+      argv[i] = (char *)sqlite3_column_text(stmt, i);
+      azColName[i] = (char *)sqlite3_column_name(stmt, i);
+    }
+
+    // Invoke the callback with current row
+    callback(&cellmap, argc, argv, azColName);
+  }
+
+  if (rc != SQLITE_DONE) {
+    print_error("Failed to execute statement");
+  }
+
+  sqlite3_finalize(stmt);
 
   int item_count = cellmap->len;
   if (item_count == 0) {
@@ -175,8 +222,7 @@ Error fetch_table(sqlite3 *db, char **response) {
   return WEB_SERVER_OK;
 }
 
-int callback(void *data, int argc, char **argv, char **azColName) {
-  CellMap **cellmap = (CellMap **)data;
+int callback(CellMap **cellmap, int argc, char **argv, char **azColName) {
   Error err;
 
   Lesson lesson = {

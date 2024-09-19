@@ -1,3 +1,4 @@
+#include "router.h"
 #include "../utils/error.h"
 #include "../utils/logger.h"
 #include <stdio.h>
@@ -5,25 +6,9 @@
 #include <string.h>
 
 char *path_to_file(char *path) {
-  // Debug print statements
   print_info("PATH: '%s', %i, %i", path, strcmp(path, "/style.css"),
              strcmp(path, "/") == 0);
 
-  char *split = strtok(path, "/");
-  if (split != NULL) {
-    char *number = strtok(NULL, "/");
-    if (number != NULL) {
-      if (strcmp(split, "o") == 0) {
-        printf("ward %s\n", number);
-      } else if (strcmp(split, "n") == 0) {
-        printf("teacher %s\n", number);
-      } else if (strcmp(split, "s") == 0) {
-        printf("classroom %s\n", number);
-      }
-    }
-  }
-
-  // // Use strcmp to compare strings
   if (strcmp(path, "/") == 0) {
     return "views/index.html";
   } else if (strcmp(path, "/style.css") == 0) {
@@ -67,8 +52,37 @@ char *read_file(const char *filename, long *file_size) {
   return file_buffer;
 }
 
-Error get_template(char *file_path, char **file_buffer, long *file_size) {
-  *file_buffer = read_file(path_to_file(file_path), file_size);
+Error get_template(char *path, char **file_buffer, long *file_size,
+                   Template *templ, char **res) {
+  char *file_path = path_to_file(path);
+  char *split = strtok(path, "/");
+  if (split != NULL) {
+    char *number = strtok(NULL, "/");
+    if (number != NULL) {
+      *res = strdup(number);
+      if (strcmp(split, "o") == 0) {
+        *templ = WARD;
+        file_path = "views/index.html";
+        printf("ward %s\n", number);
+      } else if (strcmp(split, "n") == 0) {
+        *templ = TEACHER;
+        file_path = "views/index.html";
+        printf("teacher %s\n", number);
+      } else if (strcmp(split, "s") == 0) {
+        *templ = CLASSROOM;
+        file_path = "views/index.html";
+        printf("classroom %s\n", number);
+      } else {
+        *templ = NONE;
+      }
+    } else {
+      *templ = NONE;
+    }
+  } else {
+    *templ = NONE;
+  }
+
+  *file_buffer = read_file(file_path, file_size);
   if (file_buffer == NULL) {
     return IO_ERROR;
   }
