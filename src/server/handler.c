@@ -173,10 +173,13 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
   res[0] = '\0';
 
   for (int i = 1; i < items[0].key.x; ++i) {
+    // Add time cells
     append_to_string(&res, &res_size, &res_used,
                      "<tr class=\"border-b border-gray\"> <td class=\"py-4 "
                      "px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
                      i, order_to_hour(i));
+
+    // Append missing cells at start
     for (int j = 0; j < 5; ++j) {
       append_to_string(&res, &res_size, &res_used,
                        "<td class=\"py-4 px-6\"></td>");
@@ -185,12 +188,14 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
   }
 
   for (int i = 0; i < item_count; ++i) {
+    // Start new line
     if (items[i - 1].key.x != items[i].key.x) {
       append_to_string(&res, &res_size, &res_used,
                        "<tr class=\"border-b border-gray\">");
     }
 
     LessonArray cell_array = items[i].val;
+    // Add time cells
     if (items[i - 1].key.x != items[i].key.x) {
       append_to_string(
           &res, &res_size, &res_used,
@@ -204,14 +209,28 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
 
     append_to_string(&res, &res_size, &res_used, "<td class=\"py-4 px-6\">");
     for (int j = 0; j < cell_array.count; ++j) {
-      append_to_string(&res, &res_size, &res_used, "<span>%s %s %s</span><br/>",
-                       cell_array.array[j].lesson_name,
-                       cell_array.array[j].teacher_id,
-                       cell_array.array[j].classroom);
+      append_to_string(
+          &res, &res_size, &res_used,
+          "<span>%s <a href=\"/n/%s\" class=\"uk-link\">%s</a> <a "
+          "href=\"/s/%s\" class=\"uk-link\">%s</a></span><br/>",
+          cell_array.array[j].lesson_name, cell_array.array[j].teacher_id,
+          cell_array.array[j].teacher_id, cell_array.array[j].classroom,
+          cell_array.array[j].classroom);
     }
     append_to_string(&res, &res_size, &res_used, "</td>");
 
+    // Fill missing cells
+    if (items[i].key.y + 1 != items[i + 1].key.y && items[i].key.y != 4 &&
+        items[i + 1].key.y <= 4) {
+      for (int j = items[i].key.y; j < items[i + 1].key.y - 1; ++j) {
+        append_to_string(&res, &res_size, &res_used,
+                         "<td class=\"py-4 px-6\"></td>");
+      }
+    }
+
+    // Check if we are in the same line
     if (items[i].key.x != items[i + 1].key.x) {
+      // Fill missing cells
       for (int j = items[i].key.y; j < 4; ++j) {
         append_to_string(&res, &res_size, &res_used,
                          "<td class=\"py-4 px-6\"></td>");
@@ -219,7 +238,6 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
       append_to_string(&res, &res_size, &res_used, "</tr>");
     }
   }
-  append_to_string(&res, &res_size, &res_used, "</tr>");
 
   *response = strdup(res);
   free(res);
