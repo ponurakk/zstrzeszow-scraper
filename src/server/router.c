@@ -1,18 +1,14 @@
 #include "router.h"
 #include "../utils/error.h"
-#include "../utils/logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 char *path_to_file(char *path) {
-  print_info("PATH: '%s', %i, %i", path, strcmp(path, "/style.css"),
-             strcmp(path, "/") == 0);
-
   if (strcmp(path, "/") == 0) {
     return "views/src/index.html";
-  } else if (strcmp(path, "/style.css") == 0) {
-    return "views/src/assets/style.css";
+  } else if (strcmp(path, "/styles.css") == 0) {
+    return "views/src/assets/styles.css";
   }
 
   return "views/src/404.html";
@@ -60,19 +56,15 @@ Error get_template(char *path, char **file_buffer, long *file_size,
     char *number = strtok(NULL, "/");
     if (number != NULL) {
       *res = strdup(number);
+      file_path = "views/src/plan.html";
       if (strcmp(split, "o") == 0) {
         *templ = WARD;
-        file_path = "views/src/index.html";
-        printf("ward %s\n", number);
       } else if (strcmp(split, "n") == 0) {
         *templ = TEACHER;
-        file_path = "views/src/index.html";
-        printf("teacher %s\n", number);
       } else if (strcmp(split, "s") == 0) {
         *templ = CLASSROOM;
-        file_path = "views/src/index.html";
-        printf("classroom %s\n", number);
       } else {
+        file_path = "views/src/404.html";
         *templ = NONE;
       }
     } else {
