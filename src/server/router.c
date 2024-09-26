@@ -10,12 +10,12 @@ char *path_to_file(char *path) {
              strcmp(path, "/") == 0);
 
   if (strcmp(path, "/") == 0) {
-    return "views/index.html";
+    return "views/src/index.html";
   } else if (strcmp(path, "/style.css") == 0) {
-    return "views/assets/style.css";
+    return "views/src/assets/style.css";
   }
 
-  return "views/404.html";
+  return "views/src/404.html";
 }
 
 char *read_file(const char *filename, long *file_size) {
@@ -62,15 +62,15 @@ Error get_template(char *path, char **file_buffer, long *file_size,
       *res = strdup(number);
       if (strcmp(split, "o") == 0) {
         *templ = WARD;
-        file_path = "views/index.html";
+        file_path = "views/src/index.html";
         printf("ward %s\n", number);
       } else if (strcmp(split, "n") == 0) {
         *templ = TEACHER;
-        file_path = "views/index.html";
+        file_path = "views/src/index.html";
         printf("teacher %s\n", number);
       } else if (strcmp(split, "s") == 0) {
         *templ = CLASSROOM;
-        file_path = "views/index.html";
+        file_path = "views/src/index.html";
         printf("classroom %s\n", number);
       } else {
         *templ = NONE;
