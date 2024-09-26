@@ -53,10 +53,7 @@ Error server(sqlite3 *db) {
       continue;
     }
 
-    print_info("Connection accepted from %s:%d", inet_ntoa(client.sin_addr),
-               ntohs(client.sin_port));
-
-    err = handle_client(new_socket, db);
+    err = handle_client(new_socket, db, client);
     if (err != WEB_SERVER_OK) {
       continue;
     };

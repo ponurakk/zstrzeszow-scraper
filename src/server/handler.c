@@ -1,3 +1,4 @@
+#include "handler.h"
 #include "../utils/cellmap.h"
 #include "../utils/error.h"
 #include "../utils/hour_util.h"
@@ -17,7 +18,7 @@ Error fetch_table(sqlite3 *db, char **res, Template templ, char *number);
 // int callback(void *data, int argc, char **argv, char **azColName);
 int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
 
-Error handle_client(int client_socket, sqlite3 *db) {
+Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char buffer[2048];
   int read_size;
 
@@ -33,6 +34,9 @@ Error handle_client(int client_socket, sqlite3 *db) {
   char *method = strtok(buffer, " ");
   char *path = strtok(NULL, " ");
   strtok(NULL, " ");
+
+  print_info("Connection accepted from %s:%d %s %s", inet_ntoa(client.sin_addr),
+             ntohs(client.sin_port), method, path);
 
   if (path == NULL) {
     print_error("Path is null");
