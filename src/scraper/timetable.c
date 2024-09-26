@@ -310,7 +310,7 @@ Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
     print_error("Failed getting valid from date");
   }
 
-  if (parse_timetable(context, lesson_list, ward->id) != TIMETABLE_OK) {
+  if (parse_timetable(context, lesson_list, ward->full) != TIMETABLE_OK) {
     print_error("Failed parsing timetable");
     return TIMETABLE_ERROR;
   }
