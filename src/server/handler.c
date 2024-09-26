@@ -1,21 +1,14 @@
 #include "handler.h"
 #include "../utils/cellmap.h"
-#include "../utils/error.h"
 #include "../utils/hour_util.h"
 #include "../utils/logger.h"
 #include "../utils/str_replace.h"
-#include "router.h"
-#include <arpa/inet.h>
+#include <ctype.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-void respond_http(int client_socket, char **html, long file_size);
-char *read_file(const char *filename, long *file_size);
-Error fetch_table(sqlite3 *db, char **res, Template templ, char *number);
-
-// int callback(void *data, int argc, char **argv, char **azColName);
 int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
 
 Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
@@ -43,17 +36,27 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
     close(client_socket);
     return WEB_SERVER_ERROR;
   }
+
   char *file_buffer;
-  Template templ;
   long file_size;
-  char *number;
-  get_template(path, &file_buffer, &file_size, &templ, &number);
+  Template templ;
+  char *id;
+
+  get_template(path, &file_buffer, &file_size, &templ, &id);
+  char *id_decoded = malloc(strlen(id) + 1);
+  urldecode2(id_decoded, id);
+
   char *http_reponse = file_buffer;
-  printf("%i\n", templ);
   if (templ != NONE) {
-    char *res;
-    fetch_table(db, &res, templ, number);
-    http_reponse = str_replace(file_buffer, "%res%", res);
+    char *res = NULL;
+    fetch_table(db, &res, templ, id_decoded);
+    if (res != NULL) {
+      http_reponse = str_replace(file_buffer, "%res%", res);
+      http_reponse = str_replace(http_reponse, "%title%", id_decoded);
+    } else {
+      http_reponse = str_replace(file_buffer, "%res%", "");
+      http_reponse = str_replace(http_reponse, "%title%", "Not Found");
+    }
   }
 
   respond_http(client_socket, &http_reponse, strlen(http_reponse));
@@ -96,7 +99,7 @@ void append_to_string(char **str, size_t *size, size_t *used,
   *used += required_size - 1;
 }
 
-Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
+Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
   char *sql;
   switch (templ) {
   case WARD:
@@ -128,7 +131,7 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *number) {
     return 1;
   }
 
-  sqlite3_bind_text(stmt, 1, number, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 1, id, -1, SQLITE_STATIC);
 
   while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
     int argc = sqlite3_column_count(stmt);
@@ -271,4 +274,33 @@ int callback(CellMap **cellmap, int argc, char **argv, char **azColName) {
   }
 
   return 0;
+}
+
+void urldecode2(char *dst, const char *src) {
+  char a, b;
+  while (*src) {
+    if ((*src == '%') && ((a = src[1]) && (b = src[2])) &&
+        (isxdigit(a) && isxdigit(b))) {
+      if (a >= 'a')
+        a -= 'a' - 'A';
+      if (a >= 'A')
+        a -= ('A' - 10);
+      else
+        a -= '0';
+      if (b >= 'a')
+        b -= 'a' - 'A';
+      if (b >= 'A')
+        b -= ('A' - 10);
+      else
+        b -= '0';
+      *dst++ = 16 * a + b;
+      src += 3;
+    } else if (*src == '+') {
+      *dst++ = ' ';
+      src++;
+    } else {
+      *dst++ = *src++;
+    }
+  }
+  *dst++ = '\0';
 }
