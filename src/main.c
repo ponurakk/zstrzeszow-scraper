@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-int callback(void *data, int argc, char **argv, char **azColName);
 void print();
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,

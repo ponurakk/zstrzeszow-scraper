@@ -10,6 +10,9 @@
 #include <unistd.h>
 
 int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
+int get_wards(sqlite3 *db, char **list);
+int get_teachers(sqlite3 *db, char **list);
+int get_classrooms(sqlite3 *db, char **list);
 
 Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char buffer[2048];
@@ -50,12 +53,32 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   if (templ != NONE) {
     char *res = NULL;
     fetch_table(db, &res, templ, id_decoded);
+
+    char *wards_list = "\0";
+    get_wards(db, &wards_list);
+
+    char *teachers_list = "\0";
+    get_teachers(db, &teachers_list);
+
+    char *classrooms_list = "\0";
+    get_classrooms(db, &classrooms_list);
+
     if (res != NULL) {
       http_reponse = str_replace(file_buffer, "%res%", res);
       http_reponse = str_replace(http_reponse, "%title%", id_decoded);
+      http_reponse = str_replace(http_reponse, "%effective%", "");
+      http_reponse = str_replace(http_reponse, "%generated%", "");
+      http_reponse = str_replace(http_reponse, "%wards%", wards_list);
+      http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
+      http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
     } else {
       http_reponse = str_replace(file_buffer, "%res%", "");
       http_reponse = str_replace(http_reponse, "%title%", "Not Found");
+      http_reponse = str_replace(http_reponse, "%effective%", "");
+      http_reponse = str_replace(http_reponse, "%generated%", "");
+      http_reponse = str_replace(http_reponse, "%wards%", wards_list);
+      http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
+      http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
     }
   }
 
@@ -247,7 +270,7 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
   return WEB_SERVER_OK;
 }
 
-int callback(CellMap **cellmap, int argc, char **argv, char **azColName) {
+int callback(CellMap **cellmap, int argc, char **argv, char **az_col_name) {
   Error err;
 
   Lesson lesson = {
@@ -303,4 +326,71 @@ void urldecode2(char *dst, const char *src) {
     }
   }
   *dst++ = '\0';
+}
+
+int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, "<li><a class=\"uk-link\" href=\"/o/%1$s\">%1$s</a></li>",
+          argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int get_wards(sqlite3 *db, char **list) {
+  int rc = sqlite3_exec(db, "SELECT \"full\" FROM wards", ward_list_callback,
+                        list, 0);
+  if (rc != SQLITE_OK) {
+    print_error("Failed to select data");
+    sqlite3_close(db);
+    return 1;
+  }
+
+  return 0;
+}
+
+int teacher_list_callback(void *data, int argc, char **argv,
+                          char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, "<li><a class=\"uk-link\" href=\"/n/%s\">%s</a></li>",
+          argv[1], argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int get_teachers(sqlite3 *db, char **list) {
+  int rc = sqlite3_exec(db, "SELECT \"name\", \"initials\" FROM teachers",
+                        teacher_list_callback, list, 0);
+  if (rc != SQLITE_OK) {
+    print_error("Failed to select data");
+    sqlite3_close(db);
+    return 1;
+  }
+
+  return 0;
+}
+
+int classroom_list_callback(void *data, int argc, char **argv,
+                            char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, "<li><a class=\"uk-link\" href=\"/s/%1$s\">%1$s</a></li>",
+          argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int get_classrooms(sqlite3 *db, char **list) {
+  int rc = sqlite3_exec(db,
+                        "SELECT DISTINCT classroom FROM timetable WHERE "
+                        "classroom != \"\" ORDER BY classroom + 0 ASC",
+                        classroom_list_callback, list, 0);
+  if (rc != SQLITE_OK) {
+    print_error("Failed to select data");
+    sqlite3_close(db);
+    return 1;
+  }
+
+  return 0;
 }
