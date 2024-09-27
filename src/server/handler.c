@@ -365,10 +365,11 @@ int classroom_list_callback(void *data, int argc, char **argv,
 }
 
 int get_classrooms(sqlite3 *db, char **list) {
-  int rc = sqlite3_exec(db,
-                        "SELECT DISTINCT classroom FROM timetable WHERE "
-                        "classroom != \"\" ORDER BY classroom + 0 ASC",
-                        classroom_list_callback, list, 0);
+  int rc = sqlite3_exec(
+      db,
+      "SELECT DISTINCT classroom FROM timetable WHERE "
+      "classroom != \"\" ORDER BY classroom + 0 ASC, classroom ASC",
+      classroom_list_callback, list, 0);
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
