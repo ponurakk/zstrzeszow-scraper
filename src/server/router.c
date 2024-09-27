@@ -6,12 +6,12 @@
 
 char *path_to_file(char *path) {
   if (strcmp(path, "/") == 0) {
-    return "views/src/index.html";
+    return INDEX_FILE;
   } else if (strcmp(path, "/styles.css") == 0) {
-    return "views/src/assets/styles.css";
+    return STYLES_FILE;
   }
 
-  return "views/src/404.html";
+  return NOT_FOUND_FILE;
 }
 
 char *read_file(const char *filename, long *file_size) {
@@ -56,7 +56,7 @@ Error get_template(char *path, char **file_buffer, long *file_size,
     char *number = strtok(NULL, "/");
     if (number != NULL) {
       *res = strdup(number);
-      file_path = "views/src/plan.html";
+      file_path = PLAN_FILE;
       if (strcmp(split, "o") == 0) {
         *templ = WARD;
       } else if (strcmp(split, "n") == 0) {
@@ -64,7 +64,7 @@ Error get_template(char *path, char **file_buffer, long *file_size,
       } else if (strcmp(split, "s") == 0) {
         *templ = CLASSROOM;
       } else {
-        file_path = "views/src/404.html";
+        file_path = NOT_FOUND_FILE;
         *templ = NONE;
       }
     } else {

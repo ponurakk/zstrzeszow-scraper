@@ -3,6 +3,11 @@
 
 #include "../utils/error.h"
 
+#define INDEX_FILE "views/src/index.html"
+#define PLAN_FILE "views/src/plan.html"
+#define STYLES_FILE "views/src/assets/styles.css"
+#define NOT_FOUND_FILE "views/src/404.html"
+
 typedef enum Template_t {
   NONE = 0,
   WARD = 1,
