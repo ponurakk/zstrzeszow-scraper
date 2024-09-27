@@ -72,20 +72,16 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
     if (res != NULL) {
       http_reponse = str_replace(file_buffer, "%res%", res);
       http_reponse = str_replace(http_reponse, "%title%", id_decoded);
-      http_reponse = str_replace(http_reponse, "%effective%", effective_date);
-      http_reponse = str_replace(http_reponse, "%generated%", generated_date);
-      http_reponse = str_replace(http_reponse, "%wards%", wards_list);
-      http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
-      http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
     } else {
       http_reponse = str_replace(file_buffer, "%res%", "");
       http_reponse = str_replace(http_reponse, "%title%", "Not Found");
-      http_reponse = str_replace(http_reponse, "%effective%", effective_date);
-      http_reponse = str_replace(http_reponse, "%generated%", generated_date);
-      http_reponse = str_replace(http_reponse, "%wards%", wards_list);
-      http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
-      http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
     }
+
+    http_reponse = str_replace(http_reponse, "%effective%", effective_date);
+    http_reponse = str_replace(http_reponse, "%generated%", generated_date);
+    http_reponse = str_replace(http_reponse, "%wards%", wards_list);
+    http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
+    http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
   }
 
   respond_http(client_socket, &http_reponse, strlen(http_reponse),
