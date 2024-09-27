@@ -2,18 +2,11 @@
 #include "database.h"
 #include "scraper/timetable.h"
 #include "server/listener.h"
-#include "utils/array.h"
 #include "utils/cellmap.h"
-#include "utils/error.h"
 #include "utils/logger.h"
-#include <curl/curl.h>
 #include <libxml/HTMLparser.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
-
-void print();
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
                                   void *userp) {
@@ -143,16 +136,19 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   LessonArray lesson_list;
   arrayInit(&lesson_list, 50);
   char generation_date[100];
+  char effective_date[100];
 
   print_info("Parsing timetable");
   for (int i = 0; i < ward_list_size; ++i) {
     err = get_timetable(&lesson_list, i, timetable_url, &ward_list[i],
-                        curl_handle, generation_date);
+                        curl_handle, generation_date, effective_date);
     if (err != TIMETABLE_OK) {
       print_error("%s", error_to_string(err));
       return SCRAPER_ERROR;
     }
   }
+
+  add_date(db, effective_date, generation_date);
 
   for (int i = 0; i < lesson_list.count; ++i) {
     print_info("Adding lesson %s from class %s to database",

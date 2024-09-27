@@ -36,7 +36,7 @@ Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
   return TIMETABLE_OK;
 }
 
-Error get_valid_date(xmlXPathContextPtr context, char *valid_date) {
+Error get_effective_date(xmlXPathContextPtr context, char *valid_date) {
   xmlXPathObjectPtr footer =
       xmlXPathEvalExpression((xmlChar *)"//div/table/tr[2]/td", context);
 
@@ -290,7 +290,8 @@ Error parse_timetable(xmlXPathContextPtr context, LessonArray *lesson,
 }
 
 Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
-                    Ward *ward, CURL *curl_handle, char *generation_date) {
+                    Ward *ward, CURL *curl_handle, char *generation_date,
+                    char *effective_date) {
   char timetable_path[100];
   sprintf(timetable_path, "%s/plany/%s.html", timetable_url, ward->id);
   CURLResponse response = get_request(curl_handle, timetable_path);
@@ -304,9 +305,7 @@ Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
     print_error("Failed getting generation date");
   }
 
-  // TODO: Do something with that
-  char valid_date[100];
-  if (get_valid_date(context, valid_date) != TIMETABLE_OK) {
+  if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
     print_error("Failed getting valid from date");
   }
 

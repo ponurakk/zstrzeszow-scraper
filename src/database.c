@@ -76,6 +76,21 @@ Error create_timetable_table(sqlite3 *db) {
   return SQLITE_SUCCESS;
 }
 
+Error create_date_table(sqlite3 *db) {
+  const char *create_table =
+      "CREATE TABLE IF NOT EXISTS \"date\" (\"effective_from\" VARCHAR NOT "
+      "NULL, \"generated\" VARCHAR NOT NULL);";
+
+  int rc = sqlite3_exec(db, create_table, 0, 0, 0);
+
+  if (sqlite_result(db, rc, "Created dates table") != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    return SQLITE_ERROR;
+  }
+
+  return SQLITE_SUCCESS;
+}
+
 Error create_database(sqlite3 *db) {
   if (create_wards_table(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
@@ -88,6 +103,11 @@ Error create_database(sqlite3 *db) {
   }
 
   if (create_timetable_table(db) != SQLITE_SUCCESS) {
+    sqlite3_close(db);
+    return SQLITE_ERROR;
+  }
+
+  if (create_date_table(db) != SQLITE_SUCCESS) {
     sqlite3_close(db);
     return SQLITE_ERROR;
   }
@@ -165,6 +185,29 @@ Error add_lesson(sqlite3 *db, Lesson lesson) {
   sqlite3_bind_text(stmt, 5, lesson.lesson_name, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 6, lesson.classroom, -1, SQLITE_STATIC);
   sqlite3_bind_int(stmt, 7, lesson.weekday);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE) {
+    print_error("SQL error: %s", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_finalize(stmt);
+
+  return SQLITE_SUCCESS;
+}
+
+Error add_date(sqlite3 *db, char *effective_from, char *generated) {
+  const char *sql = "INSERT INTO date(effective_from, generated) VALUES (?,?)";
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    print_error("SQL error: %s", sqlite3_errmsg(db));
+    return SQLITE_ERROR;
+  }
+
+  sqlite3_bind_text(stmt, 1, effective_from, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, generated, -1, SQLITE_STATIC);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
     print_error("SQL error: %s", sqlite3_errmsg(db));

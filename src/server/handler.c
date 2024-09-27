@@ -13,6 +13,7 @@ int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
 int get_wards(sqlite3 *db, char **list);
 int get_teachers(sqlite3 *db, char **list);
 int get_classrooms(sqlite3 *db, char **list);
+int get_date(sqlite3 *db, char **generated_date, char **effective_date);
 
 Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char buffer[2048];
@@ -63,19 +64,23 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
     char *classrooms_list = "\0";
     get_classrooms(db, &classrooms_list);
 
+    char *generated_date = "\0";
+    char *effective_date = "\0";
+    get_date(db, &generated_date, &effective_date);
+
     if (res != NULL) {
       http_reponse = str_replace(file_buffer, "%res%", res);
       http_reponse = str_replace(http_reponse, "%title%", id_decoded);
-      http_reponse = str_replace(http_reponse, "%effective%", "");
-      http_reponse = str_replace(http_reponse, "%generated%", "");
+      http_reponse = str_replace(http_reponse, "%effective%", effective_date);
+      http_reponse = str_replace(http_reponse, "%generated%", generated_date);
       http_reponse = str_replace(http_reponse, "%wards%", wards_list);
       http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
       http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
     } else {
       http_reponse = str_replace(file_buffer, "%res%", "");
       http_reponse = str_replace(http_reponse, "%title%", "Not Found");
-      http_reponse = str_replace(http_reponse, "%effective%", "");
-      http_reponse = str_replace(http_reponse, "%generated%", "");
+      http_reponse = str_replace(http_reponse, "%effective%", effective_date);
+      http_reponse = str_replace(http_reponse, "%generated%", generated_date);
       http_reponse = str_replace(http_reponse, "%wards%", wards_list);
       http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
       http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
@@ -370,6 +375,31 @@ int get_classrooms(sqlite3 *db, char **list) {
     sqlite3_close(db);
     return 1;
   }
+
+  return 0;
+}
+
+int date_callback(void *data, int argc, char **argv, char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, "%s|%s", argv[0], argv[1]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int get_date(sqlite3 *db, char **generated_date, char **effective_date) {
+  char *dates = "\0";
+  int rc =
+      sqlite3_exec(db, "SELECT generated, effective_from FROM date LIMIT 1",
+                   date_callback, &dates, 0);
+  if (rc != SQLITE_OK) {
+    print_error("Failed to select data");
+    sqlite3_close(db);
+    return 1;
+  }
+
+  *generated_date = strtok(dates, "|");
+  *effective_date = strtok(NULL, "|");
 
   return 0;
 }

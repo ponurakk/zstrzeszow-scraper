@@ -2,7 +2,6 @@
 #define MAIN_H
 
 #include <curl/curl.h>
-#include <stdio.h>
 
 typedef struct {
   char *html;
