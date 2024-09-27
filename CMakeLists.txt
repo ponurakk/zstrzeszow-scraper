@@ -11,6 +11,7 @@ set(SOURCE_FILES
   src/utils/logger.c
   src/utils/str_replace.c
   src/utils/hour_util.c
+  src/utils/content_type.c
   src/scraper/list.c
   src/scraper/timetable.c
   src/database.c

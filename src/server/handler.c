@@ -1,5 +1,6 @@
 #include "handler.h"
 #include "../utils/cellmap.h"
+#include "../utils/content_type.h"
 #include "../utils/hour_util.h"
 #include "../utils/logger.h"
 #include "../utils/str_replace.h"
@@ -87,17 +88,19 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
     }
   }
 
-  respond_http(client_socket, &http_reponse, strlen(http_reponse));
+  respond_http(client_socket, &http_reponse, strlen(http_reponse),
+               get_content_type(path_to_file(path)));
 
   return WEB_SERVER_OK;
 }
 
-void respond_http(int client_socket, char **html, long file_size) {
+void respond_http(int client_socket, char **html, long file_size,
+                  char *content_type) {
   char response[file_size + 100];
   snprintf(response, sizeof(response),
-           "HTTP/1.1 200 OK\r\nContent-Length: %lu"
-           "charset=UTF-8\r\n\r\n%s",
-           strlen(*html), *html);
+           "HTTP/1.1 200 OK\r\nContent-Type: %s; "
+           "charset=UTF-8\r\nContent-Length: %lu\r\n\r\n%s",
+           content_type, strlen(*html), *html);
   write(client_socket, response, strlen(response));
 }
 
