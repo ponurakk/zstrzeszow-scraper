@@ -96,8 +96,13 @@ void respond_http(int client_socket, char **html, long file_size) {
   write(client_socket, response, strlen(response));
 }
 
-void append_to_string(char **str, size_t *size, size_t *used,
-                      const char *format, ...) {
+typedef struct StringCache_t {
+  char *str;
+  size_t size;
+  size_t used;
+} StringCache;
+
+void append_str(StringCache *cache, const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -105,21 +110,21 @@ void append_to_string(char **str, size_t *size, size_t *used,
   size_t required_size = vsnprintf(NULL, 0, format, args) + 1;
   va_end(args);
 
-  if (*used + required_size > *size) {
+  if (cache->used + required_size > cache->size) {
     // Increase the size of the buffer
-    *size = (*size + required_size) * 2;
-    *str = realloc(*str, *size);
-    if (*str == NULL) {
+    cache->size = (cache->size + required_size) * 2;
+    cache->str = realloc(cache->str, cache->size);
+    if (cache->str == NULL) {
       perror("Failed to reallocate memory");
       exit(EXIT_FAILURE);
     }
   }
 
   va_start(args, format);
-  vsnprintf(*str + *used, required_size, format, args);
+  vsnprintf(cache->str + cache->used, required_size, format, args);
   va_end(args);
 
-  *used += required_size - 1;
+  cache->used += required_size - 1;
 }
 
 Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
@@ -187,70 +192,48 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
   cellmap_collect(cellmap, items, &item_count);
   qsort(items, item_count, sizeof(Item), compare_cells);
 
-  char *res = NULL;
-  size_t res_size = 1024;
-  size_t res_used = 0;
-
-  res = malloc(res_size);
-  if (res == NULL) {
-    perror("Failed to allocate memory");
-    return EXIT_FAILURE;
-  }
-  res[0] = '\0';
+  StringCache cache = {.str = malloc(1024), .size = 1024, .used = 0};
+  cache.str[0] = '\0';
 
   for (int i = 1; i < items[0].key.x; ++i) {
     // Add time cells
-    append_to_string(&res, &res_size, &res_used,
-                     "<tr class=\"border-b border-gray\"> <td class=\"py-4 "
-                     "px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
-                     i, order_to_hour(i));
+    append_str(&cache, HOUR_ROW, i, order_to_hour(i));
 
     // Append missing cells at start
     for (int j = 0; j < 5; ++j) {
-      append_to_string(&res, &res_size, &res_used,
-                       "<td class=\"py-4 px-6\"></td>");
+      append_str(&cache, EMPTY_TD);
     }
-    append_to_string(&res, &res_size, &res_used, "</tr>");
+    append_str(&cache, TR_CLOSE);
   }
 
   for (int i = 0; i < item_count; ++i) {
     // Start new line
     if (items[i - 1].key.x != items[i].key.x) {
-      append_to_string(&res, &res_size, &res_used,
-                       "<tr class=\"border-b border-gray\">");
+      append_str(&cache, TR_OPEN);
     }
 
     LessonArray cell_array = items[i].val;
     // Add time cells
     if (items[i - 1].key.x != items[i].key.x) {
-      append_to_string(
-          &res, &res_size, &res_used,
-          "<td class=\"py-4 px-6\">%i</td><td class=\"py-4 px-6\">%s</td>",
-          cell_array.array[0].order, cell_array.array[0].hours);
+      append_str(&cache, HOUR_CELL, cell_array.array[0].order,
+                 cell_array.array[0].hours);
       for (int j = 0; j < items[i].key.y; ++j) {
-        append_to_string(&res, &res_size, &res_used,
-                         "<td class=\"py-4 px-6\"></td>");
+        append_str(&cache, EMPTY_TD);
       }
     }
 
-    append_to_string(&res, &res_size, &res_used, "<td class=\"py-4 px-6\">");
+    append_str(&cache, TD_OPEN);
     for (int j = 0; j < cell_array.count; ++j) {
-      append_to_string(
-          &res, &res_size, &res_used,
-          "<span>%s <a href=\"/n/%s\" class=\"uk-link\">%s</a> <a "
-          "href=\"/s/%s\" class=\"uk-link\">%s</a></span><br/>",
-          cell_array.array[j].lesson_name, cell_array.array[j].teacher_id,
-          cell_array.array[j].teacher_id, cell_array.array[j].classroom,
-          cell_array.array[j].classroom);
+      append_str(&cache, CELL, cell_array.array[j].lesson_name,
+                 cell_array.array[j].teacher_id, cell_array.array[j].classroom);
     }
-    append_to_string(&res, &res_size, &res_used, "</td>");
+    append_str(&cache, TD_CLOSE);
 
     // Fill missing cells
     if (items[i].key.y + 1 != items[i + 1].key.y && items[i].key.y != 4 &&
         items[i + 1].key.y <= 4) {
       for (int j = items[i].key.y; j < items[i + 1].key.y - 1; ++j) {
-        append_to_string(&res, &res_size, &res_used,
-                         "<td class=\"py-4 px-6\"></td>");
+        append_str(&cache, EMPTY_TD);
       }
     }
 
@@ -258,15 +241,14 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
     if (items[i].key.x != items[i + 1].key.x) {
       // Fill missing cells
       for (int j = items[i].key.y; j < 4; ++j) {
-        append_to_string(&res, &res_size, &res_used,
-                         "<td class=\"py-4 px-6\"></td>");
+        append_str(&cache, EMPTY_TD);
       }
-      append_to_string(&res, &res_size, &res_used, "</tr>");
+      append_str(&cache, TR_CLOSE);
     }
   }
 
-  *response = strdup(res);
-  free(res);
+  *response = strdup(cache.str);
+  free(cache.str);
   return WEB_SERVER_OK;
 }
 
@@ -331,8 +313,7 @@ void urldecode2(char *dst, const char *src) {
 int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
   char **arr = (char **)data;
   char newString[100];
-  sprintf(newString, "<li><a class=\"uk-link\" href=\"/o/%1$s\">%1$s</a></li>",
-          argv[0]);
+  sprintf(newString, WARDS_LI_ITEM, argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
 }
@@ -353,8 +334,7 @@ int teacher_list_callback(void *data, int argc, char **argv,
                           char **az_col_name) {
   char **arr = (char **)data;
   char newString[100];
-  sprintf(newString, "<li><a class=\"uk-link\" href=\"/n/%s\">%s</a></li>",
-          argv[1], argv[0]);
+  sprintf(newString, TEACHERS_LI_ITEM, argv[1], argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
 }
@@ -375,8 +355,7 @@ int classroom_list_callback(void *data, int argc, char **argv,
                             char **az_col_name) {
   char **arr = (char **)data;
   char newString[100];
-  sprintf(newString, "<li><a class=\"uk-link\" href=\"/s/%1$s\">%1$s</a></li>",
-          argv[0]);
+  sprintf(newString, CLASSROOM_LI_ITEM, argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
 }
