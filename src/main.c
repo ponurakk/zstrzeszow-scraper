@@ -160,11 +160,6 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
     add_lesson(db, lesson_list.array[i]);
   }
 
-  struct stat stats;
-  stat("backup", &stats);
-  if (!S_ISDIR(stats.st_mode))
-    mkdir("backup", 0755);
-
   char backup_name[100];
   sprintf(backup_name, "backup/%s.db", generation_date);
   save_in_memory_to_file(db, backup_name);
@@ -256,6 +251,11 @@ void update_timetable(int signum) {
 int main() {
   Error err;
   arrayInit(&gDb_cache, 8);
+
+  struct stat stats;
+  stat("backup", &stats);
+  if (!S_ISDIR(stats.st_mode))
+    mkdir("backup", 0755);
 
   struct dirent *de;
   DIR *dir = opendir("./backup");
