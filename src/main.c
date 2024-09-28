@@ -154,9 +154,8 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
 
   add_date(db, effective_date, generation_date);
 
+  print_info("Adding lessons to database");
   for (int i = 0; i < lesson_list.count; ++i) {
-    print_info("Adding lesson %s from class %s to database",
-               lesson_list.array[i].lesson_name, lesson_list.array[i].class_id);
     add_lesson(db, lesson_list.array[i]);
   }
 
