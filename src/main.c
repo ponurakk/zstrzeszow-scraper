@@ -2,11 +2,16 @@
 #include "database.h"
 #include "scraper/timetable.h"
 #include "server/listener.h"
+#include "utils/array.h"
 #include "utils/cellmap.h"
 #include "utils/logger.h"
+#include <dirent.h>
 #include <libxml/HTMLparser.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+
+DbCacheArray gDb_cache;
 
 static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
                                   void *userp) {
@@ -108,7 +113,6 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   for (int i = 0; i < ward_html_elements->nodesetval->nodeNr; ++i) {
     xmlNodePtr ward_html_element = ward_html_elements->nodesetval->nodeTab[i];
     get_ward_list(ward_list, ward_html_element, context, i);
-    // printf("%s\t(%s)\n", wardList[i].full, wardList[i].id);
 
     err = add_ward(db, ward_list[i]);
     if (err != SQLITE_SUCCESS) {
@@ -122,7 +126,6 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
     xmlNodePtr teacher_html_element =
         teachers_html_elements->nodesetval->nodeTab[i];
     get_teachers_list(teacher_list, teacher_html_element, context, i);
-    // printf("%s\t(%s)\n", teacherList[i].name, teacherList[i].id);
 
     err = add_teacher(db, teacher_list[i]);
     if (err != SQLITE_SUCCESS) {
@@ -177,42 +180,84 @@ void print_pair(Cell key, LessonArray val) {
   print_info("Cell (%d, %d):\tLessons Size: %zu", key.x, key.y, val.count);
 }
 
+int compare_db_cache(const void *a, const void *b) {
+  return strcmp(((const DbCache *)a)->date, ((const DbCache *)b)->date);
+}
+
 int main() {
-  sqlite3 *db;
   Error err;
+  arrayInit(&gDb_cache, 8);
 
-  int rc = sqlite3_open(":memory:", &db);
+  struct dirent *de;
+  DIR *dir = opendir("./backup");
 
-  if (sqlite_result(db, rc, "Opened database successfully") != SQLITE_SUCCESS) {
-    sqlite3_close(db);
-    return 1;
+  if (dir == NULL) {
+    printf("Could not open current directory");
+    return 0;
   }
 
-  err = create_database(db);
+  while ((de = readdir(dir)) != NULL) {
+    if (strcmp(de->d_name, "..") != 0 && strcmp(de->d_name, ".") != 0) {
+      char db_path[22];
+      sprintf(db_path, "./backup/%s", de->d_name);
 
-  if (err != SQLITE_SUCCESS) {
-    print_error("%s", error_to_string(err));
-    return 1;
+      sqlite3 *db;
+      int rc = sqlite3_open(db_path, &db);
+      DbCache cache = {.db = db, .date = strdup(strtok(de->d_name, "."))};
+
+      if (sqlite_result(db, rc, "Opened database successfully") !=
+          SQLITE_SUCCESS) {
+        sqlite3_close(db);
+        return 1;
+      }
+
+      err = create_database(db);
+
+      if (err != SQLITE_SUCCESS) {
+        print_error("%s", error_to_string(err));
+        return 1;
+      }
+
+      arrayPush(&gDb_cache, cache);
+    }
   }
+
+  closedir(dir);
+
+  qsort(gDb_cache.array, gDb_cache.count, sizeof(DbCache), compare_db_cache);
 
   curl_global_init(CURL_GLOBAL_ALL);
   CURL *curl_handle = curl_easy_init();
   char *timetable_url = "http://zstrzeszow.pl/plan";
 
-  err = fetch_timetable(curl_handle, db, timetable_url);
-  if (err != SCRAPER_OK) {
-    return 1;
-    xmlCleanupParser();
-    curl_easy_cleanup(curl_handle);
-    curl_global_cleanup();
+  char generation_date[100];
+  char effective_date[100];
+
+  char timetable_path[100];
+  sprintf(timetable_path, "%s/plany/o1.html", timetable_url);
+  CURLResponse response = get_request(curl_handle, timetable_path);
+  htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
+                                  NULL, NULL, HTML_PARSE_NOERROR);
+  xmlXPathContextPtr context = xmlXPathNewContext(doc);
+
+  if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
+    print_error("Failed getting generation date");
   }
 
-  err = server(db);
+  if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
+    print_error("Failed getting valid from date");
+  }
+
+  printf("gen: %s/%s\n", generation_date,
+         gDb_cache.array[gDb_cache.count - 1].date);
+
+  err = server(&gDb_cache);
   if (err != WEB_SERVER_OK) {
     print_error("Failed launching web server");
     return 1;
   }
 
+  arrayFree(&gDb_cache);
   xmlCleanupParser();
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();

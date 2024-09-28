@@ -1,5 +1,6 @@
 #ifndef HANDLER_H
 #define HANDLER_H
+#include "../utils/array.h"
 #include "../utils/error.h"
 #include "router.h"
 #include <arpa/inet.h>
@@ -31,6 +32,7 @@ void respond_http(int client_socket, char **html, long file_size,
 char *read_file(const char *filename, long *file_size);
 Error fetch_table(sqlite3 *db, char **res, Template templ, char *number,
                   int shortened);
-Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client);
+Error handle_client(int client_socket, DbCacheArray *db,
+                    struct sockaddr_in client);
 
 #endif // !HANDLER_H

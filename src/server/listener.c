@@ -1,3 +1,4 @@
+#include "../utils/array.h"
 #include "../utils/error.h"
 #include "../utils/logger.h"
 #include "handler.h"
@@ -6,7 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-Error server(sqlite3 *db) {
+Error server(DbCacheArray *db) {
   Error err;
   int socket_desc;
   struct sockaddr_in server;

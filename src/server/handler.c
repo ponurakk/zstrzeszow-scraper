@@ -1,4 +1,5 @@
 #include "handler.h"
+#include "../utils/array.h"
 #include "../utils/cellmap.h"
 #include "../utils/content_type.h"
 #include "../utils/hour_util.h"
@@ -16,7 +17,8 @@ int get_teachers(sqlite3 *db, char **list);
 int get_classrooms(sqlite3 *db, char **list);
 int get_date(sqlite3 *db, char **generated_date, char **effective_date);
 
-Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
+Error handle_client(int client_socket, DbCacheArray *db_cache,
+                    struct sockaddr_in client) {
   char buffer[2048];
   int read_size;
 
@@ -39,10 +41,9 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char *key, *value;
 
   int shortened = 0;
+  sqlite3 *db = NULL;
 
   if (query_string != NULL) {
-    printf("Query String: %s\n", query_string);
-
     char *token;
     char *outer_saveptr = NULL;
     char *inner_saveptr = NULL;
@@ -51,15 +52,29 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
       key = strtok_r(token, "=", &inner_saveptr);
       value = strtok_r(NULL, "=", &inner_saveptr);
 
-      printf("Key: %s ", key);
-      printf("Value: %s\n", value);
-
       if (strcmp(key, "short") == 0) {
         shortened = atoi(value);
       }
 
+      if (strcmp(key, "date") == 0) {
+        for (int i = 0; i < db_cache->count; ++i) {
+          if (strcmp(value, db_cache->array[i].date) == 0) {
+            db = db_cache->array[i].db;
+          }
+        }
+      }
+
       token = strtok_r(NULL, "&", &outer_saveptr);
     };
+  }
+
+  if (db == NULL) {
+    if (db_cache->count <= 0) {
+      print_error("Failed to select database");
+      close(client_socket);
+      return WEB_SERVER_ERROR;
+    }
+    db = db_cache->array[db_cache->count - 1].db;
   }
 
   print_info("Connection accepted from %s:%d %s %s", inet_ntoa(client.sin_addr),

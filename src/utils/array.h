@@ -1,6 +1,8 @@
-#pragma once
 #ifndef ARRAY_H
 #define ARRAY_H
+
+#include <sqlite3.h>
+#include <stdlib.h>
 
 typedef struct Lesson {
   char *class_id;
@@ -12,7 +14,10 @@ typedef struct Lesson {
   int weekday;
 } Lesson;
 
-#include <stdlib.h>
+typedef struct DbCache_t {
+  char *date;
+  sqlite3 *db;
+} DbCache;
 
 #define DEFINE_ARRAY(type)                                                     \
   typedef struct {                                                             \
@@ -28,21 +33,30 @@ typedef struct Lesson {
 
 DEFINE_ARRAY(int)
 DEFINE_ARRAY(Lesson)
+DEFINE_ARRAY(DbCache)
 
 #define arrayInit(array, size)                                                 \
-  _Generic((array), intArray *: intArrayInit, LessonArray *: LessonArrayInit)( \
-      array, size)
+  _Generic((array),                                                            \
+      intArray *: intArrayInit,                                                \
+      LessonArray *: LessonArrayInit,                                          \
+      DbCacheArray *: DbCacheArrayInit)(array, size)
 
 #define arrayPush(array, element)                                              \
-  _Generic((array), intArray *: intArrayPush, LessonArray *: LessonArrayPush)( \
-      array, element)
+  _Generic((array),                                                            \
+      intArray *: intArrayPush,                                                \
+      LessonArray *: LessonArrayPush,                                          \
+      DbCacheArray *: DbCacheArrayPush)(array, element)
 
 #define arrayPop(array)                                                        \
-  _Generic((array), intArray *: intArrayPop, LessonArray *: LessonArrayPop)(   \
-      array)
+  _Generic((array),                                                            \
+      intArray *: intArrayPop,                                                 \
+      LessonArray *: LessonArrayPop,                                           \
+      DbCacheArray *: DbCacheArrayPop)(array)
 
 #define arrayFree(array)                                                       \
-  _Generic((array), intArray *: intArrayFree, LessonArray *: LessonArrayFree)( \
-      array)
+  _Generic((array),                                                            \
+      intArray *: intArrayFree,                                                \
+      LessonArray *: LessonArrayFree,                                          \
+      DbCacheArray *: DbCacheArrayFree)(array)
 
 #endif // ARRAY_H

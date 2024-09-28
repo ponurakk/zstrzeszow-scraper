@@ -1,5 +1,6 @@
 #ifndef ERROR_H
 #define ERROR_H
+#undef SQLITE_ERROR
 
 typedef enum {
   SQLITE_SUCCESS = 0,

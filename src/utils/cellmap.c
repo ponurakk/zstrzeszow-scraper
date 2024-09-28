@@ -128,8 +128,8 @@ int compare_cells(const void *a, const void *b) {
   if (item1->key.x != item2->key.x) {
     return item1->key.x - item2->key.x; // Sort by x-coordinate first
   } else {
-    return item1->key.y -
-           item2->key.y; // If x is the same, sort by y-coordinate
+    // If x is the same, sort by y-coordinate
+    return item1->key.y - item2->key.y;
   }
 }
 
