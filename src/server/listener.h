@@ -4,6 +4,8 @@
 #include "../utils/error.h"
 #include <sqlite3.h>
 
+#define LISTEN_PORT 3000
+
 Error server(DbCacheArray *db);
 
 #endif // !LISTENER_H

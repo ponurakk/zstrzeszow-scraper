@@ -1,3 +1,4 @@
+#include "listener.h"
 #include "../utils/array.h"
 #include "../utils/error.h"
 #include "../utils/logger.h"
@@ -29,7 +30,7 @@ Error server(DbCacheArray *db) {
   // Prepare the sockaddr_in structure
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
-  server.sin_port = htons(3000);
+  server.sin_port = htons(LISTEN_PORT);
 
   // Bind
   if (bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
@@ -43,7 +44,7 @@ Error server(DbCacheArray *db) {
     return WEB_SERVER_ERROR;
   }
 
-  print_info("Server listening on :%i", 3000);
+  print_info("Server listening on :%i", LISTEN_PORT);
   int c = sizeof(struct sockaddr_in);
   int new_socket;
   struct sockaddr_in client;
