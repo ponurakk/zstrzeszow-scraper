@@ -205,7 +205,12 @@ void update_timetable(int signum) {
     print_error("Failed getting valid from date");
   }
 
-  if (strcmp(generation_date, gDb_cache.array[gDb_cache.count - 1].date) != 0) {
+  char *last_generation_date;
+  if (gDb_cache.array[gDb_cache.count - 1].date != NULL) {
+    last_generation_date = gDb_cache.array[gDb_cache.count - 1].date;
+  }
+
+  if (strcmp(generation_date, last_generation_date) != 0) {
     sqlite3 *tmp_db;
     int rc = sqlite3_open(":memory:", &tmp_db);
 
