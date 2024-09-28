@@ -29,7 +29,8 @@ void urldecode2(char *dst, const char *src);
 void respond_http(int client_socket, char **html, long file_size,
                   char *content_type);
 char *read_file(const char *filename, long *file_size);
-Error fetch_table(sqlite3 *db, char **res, Template templ, char *number);
+Error fetch_table(sqlite3 *db, char **res, Template templ, char *number,
+                  int shortened);
 Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client);
 
 #endif // !HANDLER_H

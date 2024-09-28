@@ -33,6 +33,35 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char *path = strtok(NULL, " ");
   strtok(NULL, " ");
 
+  char *query_string = NULL;
+  char *path_only = strtok(path, "?");
+  query_string = strtok(NULL, "?");
+  char *key, *value;
+
+  int shortened = 0;
+
+  if (query_string != NULL) {
+    printf("Query String: %s\n", query_string);
+
+    char *token;
+    char *outer_saveptr = NULL;
+    char *inner_saveptr = NULL;
+    token = strtok_r(query_string, "&", &outer_saveptr);
+    while (token != NULL) {
+      key = strtok_r(token, "=", &inner_saveptr);
+      value = strtok_r(NULL, "=", &inner_saveptr);
+
+      printf("Key: %s ", key);
+      printf("Value: %s\n", value);
+
+      if (strcmp(key, "short") == 0) {
+        shortened = atoi(value);
+      }
+
+      token = strtok_r(NULL, "&", &outer_saveptr);
+    };
+  }
+
   print_info("Connection accepted from %s:%d %s %s", inet_ntoa(client.sin_addr),
              ntohs(client.sin_port), method, path);
 
@@ -54,7 +83,7 @@ Error handle_client(int client_socket, sqlite3 *db, struct sockaddr_in client) {
   char *http_reponse = file_buffer;
   if (templ != NONE) {
     char *res = NULL;
-    fetch_table(db, &res, templ, id_decoded);
+    fetch_table(db, &res, templ, id_decoded, shortened);
 
     char *wards_list = "\0";
     get_wards(db, &wards_list);
@@ -131,7 +160,8 @@ void append_str(StringCache *cache, const char *format, ...) {
   cache->used += required_size - 1;
 }
 
-Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
+Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
+                  int shortened) {
   char *sql;
   switch (templ) {
   case WARD:
@@ -201,7 +231,11 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
 
   for (int i = 1; i < items[0].key.x; ++i) {
     // Add time cells
-    append_str(&cache, HOUR_ROW, i, order_to_hour(i));
+    if (shortened == 0) {
+      append_str(&cache, HOUR_ROW, i, order_to_hour(i));
+    } else {
+      append_str(&cache, HOUR_ROW, i, order_to_hour_shortened(i));
+    }
 
     // Append missing cells at start
     for (int j = 0; j < 5; ++j) {
@@ -219,8 +253,13 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id) {
     LessonArray cell_array = items[i].val;
     // Add time cells
     if (items[i - 1].key.x != items[i].key.x) {
-      append_str(&cache, HOUR_CELL, cell_array.array[0].order,
-                 cell_array.array[0].hours);
+      if (shortened == 0) {
+        append_str(&cache, HOUR_CELL, cell_array.array[0].order,
+                   order_to_hour(cell_array.array[0].order));
+      } else {
+        append_str(&cache, HOUR_CELL, cell_array.array[0].order,
+                   order_to_hour_shortened(cell_array.array[0].order));
+      }
       for (int j = 0; j < items[i].key.y; ++j) {
         append_str(&cache, EMPTY_TD);
       }
