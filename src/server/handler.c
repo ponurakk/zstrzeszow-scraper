@@ -89,7 +89,7 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
   char *file_buffer;
   long file_size;
   Template templ;
-  char *id;
+  char *id = "\0";
 
   get_template(path, &file_buffer, &file_size, &templ, &id);
   char *id_decoded = malloc(strlen(id) + 1);
