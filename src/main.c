@@ -7,6 +7,7 @@
 #include "utils/logger.h"
 #include <dirent.h>
 #include <libxml/HTMLparser.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -184,6 +185,74 @@ int compare_db_cache(const void *a, const void *b) {
   return strcmp(((const DbCache *)a)->date, ((const DbCache *)b)->date);
 }
 
+void update_timetable(int signum) {
+  print_debug("Fetching newest timetable...");
+  Error err;
+  curl_global_init(CURL_GLOBAL_ALL);
+  CURL *curl_handle = curl_easy_init();
+  char *timetable_url = TIMETABLE_URL;
+
+  char generation_date[100];
+  char effective_date[100];
+
+  char timetable_path[100];
+  sprintf(timetable_path, "%s/plany/o1.html", timetable_url);
+  CURLResponse response = get_request(curl_handle, timetable_path);
+  htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
+                                  NULL, NULL, HTML_PARSE_NOERROR);
+  xmlXPathContextPtr context = xmlXPathNewContext(doc);
+
+  if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
+    print_error("Failed getting generation date");
+  }
+
+  if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
+    print_error("Failed getting valid from date");
+  }
+
+  if (strcmp(generation_date, gDb_cache.array[gDb_cache.count - 1].date) != 0) {
+    sqlite3 *tmp_db;
+    int rc = sqlite3_open(":memory:", &tmp_db);
+
+    if (sqlite_result(tmp_db, rc, "Opened database successfully") !=
+        SQLITE_SUCCESS) {
+      sqlite3_close(tmp_db);
+      return;
+    }
+
+    err = create_database(tmp_db);
+
+    if (err != SQLITE_SUCCESS) {
+      print_error("%s", error_to_string(err));
+      return;
+    }
+
+    err = fetch_timetable(curl_handle, tmp_db, timetable_url);
+    if (err != SCRAPER_OK) {
+      return;
+      xmlCleanupParser();
+      curl_easy_cleanup(curl_handle);
+      curl_global_cleanup();
+    }
+
+    sqlite3_close(tmp_db);
+
+    char db_path[22];
+    sprintf(db_path, "./backup/%s.db", generation_date);
+
+    sqlite3 *db;
+    rc = sqlite3_open(db_path, &db);
+    DbCache cache = {.db = db, .date = strdup(generation_date)};
+
+    arrayPush(&gDb_cache, cache);
+    qsort(gDb_cache.array, gDb_cache.count, sizeof(DbCache), compare_db_cache);
+
+    print_debug("Successfully fetched %s", generation_date);
+  }
+
+  curl_easy_cleanup(curl_handle);
+}
+
 int main() {
   Error err;
   arrayInit(&gDb_cache, 8);
@@ -226,30 +295,22 @@ int main() {
 
   qsort(gDb_cache.array, gDb_cache.count, sizeof(DbCache), compare_db_cache);
 
-  curl_global_init(CURL_GLOBAL_ALL);
-  CURL *curl_handle = curl_easy_init();
-  char *timetable_url = "http://zstrzeszow.pl/plan";
+  struct itimerval timer;
+  struct sigaction sa;
 
-  char generation_date[100];
-  char effective_date[100];
+  // Install signal handler for SIGALRM
+  sa.sa_handler = &update_timetable;
+  sa.sa_flags = SA_RESTART;
+  sigaction(SIGALRM, &sa, NULL);
 
-  char timetable_path[100];
-  sprintf(timetable_path, "%s/plany/o1.html", timetable_url);
-  CURLResponse response = get_request(curl_handle, timetable_path);
-  htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
-                                  NULL, NULL, HTML_PARSE_NOERROR);
-  xmlXPathContextPtr context = xmlXPathNewContext(doc);
+  // Configure the timer to expire after 1 second, then every 1 second
+  timer.it_value.tv_sec = 1;
+  timer.it_value.tv_usec = 0;
+  timer.it_interval.tv_sec = 60 * 60 * 24;
+  timer.it_interval.tv_usec = 0;
 
-  if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
-    print_error("Failed getting generation date");
-  }
-
-  if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
-    print_error("Failed getting valid from date");
-  }
-
-  printf("gen: %s/%s\n", generation_date,
-         gDb_cache.array[gDb_cache.count - 1].date);
+  // Start the timer
+  setitimer(ITIMER_REAL, &timer, NULL);
 
   err = server(&gDb_cache);
   if (err != WEB_SERVER_OK) {
@@ -259,7 +320,6 @@ int main() {
 
   arrayFree(&gDb_cache);
   xmlCleanupParser();
-  curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
 
   return 0;

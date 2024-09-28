@@ -3,6 +3,8 @@
 
 #include <curl/curl.h>
 
+#define TIMETABLE_URL "http://zstrzeszow.pl/plan"
+
 typedef struct {
   char *html;
   size_t size;
