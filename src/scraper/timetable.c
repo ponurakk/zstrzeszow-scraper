@@ -133,13 +133,20 @@ Error parse_3_spans(xmlXPathContextPtr context, Lesson *l, int i) {
   xmlXPathObjectPtr classroom_html =
       xmlXPathEvalExpression((xmlChar *)classroom_xpath, context);
 
-  xmlNodePtr subject = subject_html->nodesetval->nodeTab[0];
-  xmlNodePtr teacher = teacher_html->nodesetval->nodeTab[0];
-  xmlNodePtr classroom = classroom_html->nodesetval->nodeTab[0];
+  if (subject_html->nodesetval->nodeNr > 0) {
+    xmlNodePtr subject = subject_html->nodesetval->nodeTab[0];
+    l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
+  }
 
-  l->lesson_name = strdup((char *)xmlNodeGetContent(subject));
-  l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
-  l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+  if (teacher_html->nodesetval->nodeNr > 0) {
+    xmlNodePtr teacher = teacher_html->nodesetval->nodeTab[0];
+    l->teacher_id = strdup((char *)xmlNodeGetContent(teacher));
+  }
+
+  if (classroom_html->nodesetval->nodeNr > 0) {
+    xmlNodePtr classroom = classroom_html->nodesetval->nodeTab[0];
+    l->classroom = strdup((char *)xmlNodeGetContent(classroom));
+  }
 
   return TIMETABLE_OK;
 }
