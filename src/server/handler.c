@@ -181,17 +181,17 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
   switch (templ) {
   case WARD:
     sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
-          "classroom, weekday FROM timetable WHERE class_id = ? "
+          "classroom, weekday, class_id FROM timetable WHERE class_id = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
   case TEACHER:
     sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
-          "classroom, weekday FROM timetable WHERE teacher_id = ? "
+          "classroom, weekday, class_id FROM timetable WHERE teacher_id = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
   case CLASSROOM:
     sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
-          "classroom, weekday FROM timetable WHERE classroom = ? "
+          "classroom, weekday, class_id FROM timetable WHERE classroom = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
   default:
@@ -283,7 +283,8 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
     append_str(&cache, TD_OPEN);
     for (int j = 0; j < cell_array.count; ++j) {
       append_str(&cache, CELL, cell_array.array[j].lesson_name,
-                 cell_array.array[j].teacher_id, cell_array.array[j].classroom);
+                 cell_array.array[j].teacher_id, cell_array.array[j].classroom,
+                 cell_array.array[j].class_id);
     }
     append_str(&cache, TD_CLOSE);
 
@@ -320,6 +321,7 @@ int callback(CellMap **cellmap, int argc, char **argv, char **az_col_name) {
       .teacher_id = strdup(argv[3]),
       .classroom = strdup(argv[4]),
       .weekday = atoi(argv[5]),
+      .class_id = strdup(argv[6]),
   };
 
   Cell cell = {.x = lesson.order, .y = lesson.weekday};
