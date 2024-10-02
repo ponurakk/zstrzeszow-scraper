@@ -301,14 +301,21 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
   }
 
   for (int i = 0; i < item_count; ++i) {
+    int item_x;
+    if (i - 1 < 0) {
+      item_x = 99;
+    } else {
+      item_x = items[i - 1].key.x;
+    }
+
     // Start new line
-    if (items[i - 1].key.x != items[i].key.x) {
+    if (item_x != items[i].key.x) {
       append_str(&cache, TR_OPEN);
     }
 
     LessonArray cell_array = items[i].val;
     // Add time cells
-    if (items[i - 1].key.x != items[i].key.x) {
+    if (item_x != items[i].key.x) {
       if (shortened == 0) {
         append_str(&cache, HOUR_CELL, cell_array.array[0].order,
                    order_to_hour(cell_array.array[0].order));
