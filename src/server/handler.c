@@ -19,6 +19,7 @@ int get_classrooms(sqlite3 *db, char **list, void *callback);
 int get_date(sqlite3 *db, char **generated_date, char **effective_date,
              void *callback);
 int get_select(sqlite3 *db, char **select);
+int get_dates(DbCacheArray *db_cache, char **list);
 
 int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
   char **arr = (char **)data;
@@ -150,6 +151,9 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     char *effective_date = "\0";
     get_date(db, &generated_date, &effective_date, date_callback);
 
+    char *dates = "\0";
+    get_dates(db_cache, &dates);
+
     if (res != NULL) {
       http_reponse = str_replace(file_buffer, "%res%", res);
       http_reponse = str_replace(http_reponse, "%title%", id_decoded);
@@ -158,6 +162,7 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
       http_reponse = str_replace(http_reponse, "%title%", "Not Found");
     }
 
+    http_reponse = str_replace(http_reponse, "%dates%", dates);
     http_reponse = str_replace(http_reponse, "%effective%", effective_date);
     http_reponse = str_replace(http_reponse, "%generated%", generated_date);
     http_reponse = str_replace(http_reponse, "%wards%", wards_list);
@@ -545,5 +550,19 @@ int get_select(sqlite3 *db, char **select) {
 
   *select = strdup(res);
 
+  return 0;
+}
+
+int get_dates(DbCacheArray *db_cache, char **list) {
+  StringCache cache = {.str = malloc(1024), .size = 1024, .used = 0};
+  cache.str[0] = '\0';
+
+  for (int i = 0; i < db_cache->count; ++i) {
+    append_str(&cache, DATES_LI, db_cache->array[i].date);
+  }
+
+  *list = strdup(cache.str);
+
+  free(cache.str);
   return 0;
 }

@@ -42,6 +42,8 @@
 #define TD_OPEN "<td class=\"py-4 px-6\">"
 #define TD_CLOSE "</td>"
 
+#define DATES_LI "<li><a class=\"date\" href=\"?date=%1$s\">%1$s</a></li>"
+
 void urldecode2(char *dst, const char *src);
 void respond_http(int client_socket, char **html, long file_size,
                   char *content_type);
