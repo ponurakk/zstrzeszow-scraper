@@ -34,7 +34,7 @@
 #define CLASSROOM_PLAN_CELL                                                    \
   "<span>%1$s <a "                                                             \
   "href=\"/n/%2$s\" class=\"uk-link\">%2$s</a> <a "                            \
-  "href=\"/s/%3$s\" class=\"uk-link\">%3$s</a></span><br/>"
+  "href=\"/o/%3$s\" class=\"uk-link\">%3$s</a></span><br/>"
 
 #define TR_OPEN "<tr class=\"border-b border-gray\">"
 #define TR_CLOSE "</tr>"
