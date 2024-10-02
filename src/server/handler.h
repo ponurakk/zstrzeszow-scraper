@@ -10,6 +10,13 @@
 #define TEACHERS_LI_ITEM "<li><a href=\"/n/%1$s\">%2$s (%1$s)</a></li>"
 #define CLASSROOM_LI_ITEM "<li><a href=\"/s/%1$s\">%1$s</a></li>"
 
+#define WARDS_OPTION_ITEM                                                      \
+  "<option value=\"/o/%1$s\" class=\"text-white\">%1$s</option>"
+#define TEACHERS_OPTION_ITEM                                                   \
+  "<option value=\"/n/%1$s\" class=\"text-white\">%2$s (%1$s)</option>"
+#define CLASSROOM_OPTION_ITEM                                                  \
+  "<option value=\"/s/%1$s\" class=\"text-white\">%1$s</option>"
+
 #define HOUR_ROW                                                               \
   "<tr class=\"border-b border-gray\"> <td class=\"py-4 px-6\">%i</td><td "    \
   "class=\"py-4 px-6\">%s</td>"

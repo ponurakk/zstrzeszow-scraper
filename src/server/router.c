@@ -71,7 +71,7 @@ Error get_template(char *path, char **file_buffer, long *file_size,
       *templ = NONE;
     }
   } else {
-    *templ = NONE;
+    *templ = INDEX;
   }
 
   *file_buffer = read_file(file_path, file_size);

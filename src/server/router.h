@@ -10,9 +10,10 @@
 
 typedef enum Template_t {
   NONE = 0,
-  WARD = 1,
-  TEACHER = 2,
-  CLASSROOM = 3
+  INDEX = 1,
+  WARD = 2,
+  TEACHER = 3,
+  CLASSROOM = 4
 } Template;
 
 char *path_to_file(char *path);

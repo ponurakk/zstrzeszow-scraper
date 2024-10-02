@@ -13,10 +13,46 @@
 #include <unistd.h>
 
 int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
-int get_wards(sqlite3 *db, char **list);
-int get_teachers(sqlite3 *db, char **list);
-int get_classrooms(sqlite3 *db, char **list);
-int get_date(sqlite3 *db, char **generated_date, char **effective_date);
+int get_wards(sqlite3 *db, char **list, void *callback);
+int get_teachers(sqlite3 *db, char **list, void *callback);
+int get_classrooms(sqlite3 *db, char **list, void *callback);
+int get_date(sqlite3 *db, char **generated_date, char **effective_date,
+             void *callback);
+int get_select(sqlite3 *db, char **select);
+
+int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, WARDS_LI_ITEM, argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int teacher_list_callback(void *data, int argc, char **argv,
+                          char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, TEACHERS_LI_ITEM, argv[1], argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int classroom_list_callback(void *data, int argc, char **argv,
+                            char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, CLASSROOM_LI_ITEM, argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int date_callback(void *data, int argc, char **argv, char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, "%s|%s", argv[0], argv[1]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
 
 Error handle_client(int client_socket, DbCacheArray *db_cache,
                     struct sockaddr_in client) {
@@ -97,22 +133,22 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
   urldecode2(id_decoded, id);
 
   char *http_reponse = file_buffer;
-  if (templ != NONE) {
+  if (templ == WARD || templ == TEACHER || templ == CLASSROOM) {
     char *res = NULL;
     fetch_table(db, &res, templ, id_decoded, shortened);
 
     char *wards_list = "\0";
-    get_wards(db, &wards_list);
+    get_wards(db, &wards_list, ward_list_callback);
 
     char *teachers_list = "\0";
-    get_teachers(db, &teachers_list);
+    get_teachers(db, &teachers_list, teacher_list_callback);
 
     char *classrooms_list = "\0";
-    get_classrooms(db, &classrooms_list);
+    get_classrooms(db, &classrooms_list, classroom_list_callback);
 
     char *generated_date = "\0";
     char *effective_date = "\0";
-    get_date(db, &generated_date, &effective_date);
+    get_date(db, &generated_date, &effective_date, date_callback);
 
     if (res != NULL) {
       http_reponse = str_replace(file_buffer, "%res%", res);
@@ -127,6 +163,10 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     http_reponse = str_replace(http_reponse, "%wards%", wards_list);
     http_reponse = str_replace(http_reponse, "%teachers%", teachers_list);
     http_reponse = str_replace(http_reponse, "%classrooms%", classrooms_list);
+  } else if (templ == INDEX) {
+    char *select = "\0";
+    get_select(db, &select);
+    http_reponse = str_replace(http_reponse, "%select%", select);
   }
 
   respond_http(client_socket, &http_reponse, strlen(http_reponse),
@@ -389,17 +429,8 @@ void urldecode2(char *dst, const char *src) {
   *dst++ = '\0';
 }
 
-int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
-  char **arr = (char **)data;
-  char newString[100];
-  sprintf(newString, WARDS_LI_ITEM, argv[0]);
-  *arr = appendstr(strdup(*arr), newString);
-  return 0;
-}
-
-int get_wards(sqlite3 *db, char **list) {
-  int rc = sqlite3_exec(db, "SELECT \"full\" FROM wards", ward_list_callback,
-                        list, 0);
+int get_wards(sqlite3 *db, char **list, void *callback) {
+  int rc = sqlite3_exec(db, "SELECT \"full\" FROM wards", callback, list, 0);
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
@@ -409,18 +440,9 @@ int get_wards(sqlite3 *db, char **list) {
   return 0;
 }
 
-int teacher_list_callback(void *data, int argc, char **argv,
-                          char **az_col_name) {
-  char **arr = (char **)data;
-  char newString[100];
-  sprintf(newString, TEACHERS_LI_ITEM, argv[1], argv[0]);
-  *arr = appendstr(strdup(*arr), newString);
-  return 0;
-}
-
-int get_teachers(sqlite3 *db, char **list) {
+int get_teachers(sqlite3 *db, char **list, void *callback) {
   int rc = sqlite3_exec(db, "SELECT \"name\", \"initials\" FROM teachers",
-                        teacher_list_callback, list, 0);
+                        callback, list, 0);
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
@@ -430,21 +452,12 @@ int get_teachers(sqlite3 *db, char **list) {
   return 0;
 }
 
-int classroom_list_callback(void *data, int argc, char **argv,
-                            char **az_col_name) {
-  char **arr = (char **)data;
-  char newString[100];
-  sprintf(newString, CLASSROOM_LI_ITEM, argv[0]);
-  *arr = appendstr(strdup(*arr), newString);
-  return 0;
-}
-
-int get_classrooms(sqlite3 *db, char **list) {
+int get_classrooms(sqlite3 *db, char **list, void *callback) {
   int rc = sqlite3_exec(
       db,
       "SELECT DISTINCT classroom FROM timetable WHERE "
       "classroom != \"\" ORDER BY classroom + 0 ASC, classroom ASC",
-      classroom_list_callback, list, 0);
+      callback, list, 0);
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
@@ -454,19 +467,12 @@ int get_classrooms(sqlite3 *db, char **list) {
   return 0;
 }
 
-int date_callback(void *data, int argc, char **argv, char **az_col_name) {
-  char **arr = (char **)data;
-  char newString[100];
-  sprintf(newString, "%s|%s", argv[0], argv[1]);
-  *arr = appendstr(strdup(*arr), newString);
-  return 0;
-}
-
-int get_date(sqlite3 *db, char **generated_date, char **effective_date) {
+int get_date(sqlite3 *db, char **generated_date, char **effective_date,
+             void *callback) {
   char *dates = "\0";
   int rc =
       sqlite3_exec(db, "SELECT generated, effective_from FROM date LIMIT 1",
-                   date_callback, &dates, 0);
+                   callback, &dates, 0);
   if (rc != SQLITE_OK) {
     print_error("Failed to select data");
     sqlite3_close(db);
@@ -475,6 +481,62 @@ int get_date(sqlite3 *db, char **generated_date, char **effective_date) {
 
   *generated_date = strtok(dates, "|");
   *effective_date = strtok(NULL, "|");
+
+  return 0;
+}
+
+int select_ward_list_callback(void *data, int argc, char **argv,
+                              char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, WARDS_OPTION_ITEM, argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int select_teacher_list_callback(void *data, int argc, char **argv,
+                                 char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, TEACHERS_OPTION_ITEM, argv[1], argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int select_classroom_list_callback(void *data, int argc, char **argv,
+                                   char **az_col_name) {
+  char **arr = (char **)data;
+  char newString[100];
+  sprintf(newString, CLASSROOM_OPTION_ITEM, argv[0]);
+  *arr = appendstr(strdup(*arr), newString);
+  return 0;
+}
+
+int get_select(sqlite3 *db, char **select) {
+  char *res = "\0";
+  char *wards_list = "\0";
+  get_wards(db, &wards_list, select_ward_list_callback);
+
+  char *teachers_list = "\0";
+  get_teachers(db, &teachers_list, select_teacher_list_callback);
+
+  char *classrooms_list = "\0";
+  get_classrooms(db, &classrooms_list, select_classroom_list_callback);
+
+  res = appendstr(strdup(res),
+                  "<optgroup label=\"Odziały\" class=\"text-gray-400\">");
+  res = appendstr(strdup(res), wards_list);
+  res = appendstr(strdup(res), "</optgroup>");
+  res = appendstr(strdup(res),
+                  "<optgroup label=\"Nauczyciele\" class=\"text-gray-400\">");
+  res = appendstr(strdup(res), teachers_list);
+  res = appendstr(strdup(res), "</optgroup>");
+  res = appendstr(strdup(res),
+                  "<optgroup label=\"Sale\" class=\"text-gray-400\">");
+  res = appendstr(strdup(res), classrooms_list);
+  res = appendstr(strdup(res), "</optgroup>");
+
+  *select = strdup(res);
 
   return 0;
 }
