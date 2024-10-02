@@ -16,8 +16,16 @@
 #define HOUR_CELL                                                              \
   "<td class=\"py-4 px-6\">%i</td><td class=\"py-4 px-6\">%s</td>"
 #define EMPTY_TD "<td class=\"py-4 px-6\"></td>"
-#define CELL                                                                   \
-  "<span><a href=\"/o/%4$s\" class=\"uk-link\">%4$s</a> %1$s <a "              \
+#define WARD_PLAN_CELL                                                         \
+  "<span>%1$s <a "                                                             \
+  "href=\"/n/%2$s\" class=\"uk-link\">%2$s</a> <a "                            \
+  "href=\"/s/%3$s\" class=\"uk-link\">%3$s</a></span><br/>"
+#define TEACHER_PLAN_CELL                                                      \
+  "<span>%1$s <a "                                                             \
+  "href=\"/s/%2$s\" class=\"uk-link\">%2$s</a> <a "                            \
+  "href=\"/o/%3$s\" class=\"uk-link\">%3$s</a></span><br/>"
+#define CLASSROOM_PLAN_CELL                                                    \
+  "<span>%1$s <a "                                                             \
   "href=\"/n/%2$s\" class=\"uk-link\">%2$s</a> <a "                            \
   "href=\"/s/%3$s\" class=\"uk-link\">%3$s</a></span><br/>"
 

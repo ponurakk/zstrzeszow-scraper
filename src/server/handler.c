@@ -5,6 +5,7 @@
 #include "../utils/hour_util.h"
 #include "../utils/logger.h"
 #include "../utils/str_replace.h"
+#include "router.h"
 #include <ctype.h>
 #include <sqlite3.h>
 #include <stdio.h>
@@ -282,9 +283,27 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
 
     append_str(&cache, TD_OPEN);
     for (int j = 0; j < cell_array.count; ++j) {
-      append_str(&cache, CELL, cell_array.array[j].lesson_name,
-                 cell_array.array[j].teacher_id, cell_array.array[j].classroom,
-                 cell_array.array[j].class_id);
+      switch (templ) {
+      case WARD:
+        append_str(&cache, WARD_PLAN_CELL, cell_array.array[j].lesson_name,
+                   cell_array.array[j].teacher_id,
+                   cell_array.array[j].classroom);
+        break;
+      case TEACHER:
+        append_str(&cache, TEACHER_PLAN_CELL, cell_array.array[j].lesson_name,
+                   cell_array.array[j].classroom, cell_array.array[j].class_id);
+        break;
+      case CLASSROOM:
+        append_str(&cache, CLASSROOM_PLAN_CELL, cell_array.array[j].lesson_name,
+                   cell_array.array[j].teacher_id,
+                   cell_array.array[j].class_id);
+        break;
+      default:
+        append_str(&cache, WARD_PLAN_CELL, cell_array.array[j].lesson_name,
+                   cell_array.array[j].teacher_id,
+                   cell_array.array[j].classroom);
+        break;
+      }
     }
     append_str(&cache, TD_CLOSE);
 
