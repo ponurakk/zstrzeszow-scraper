@@ -23,7 +23,7 @@ int get_dates(DbCacheArray *db_cache, char **list);
 
 int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
   char **arr = (char **)data;
-  char newString[100];
+  char newString[200];
   sprintf(newString, WARDS_LI_ITEM, argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
@@ -32,7 +32,7 @@ int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
 int teacher_list_callback(void *data, int argc, char **argv,
                           char **az_col_name) {
   char **arr = (char **)data;
-  char newString[100];
+  char newString[200];
   sprintf(newString, TEACHERS_LI_ITEM, argv[1], argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
@@ -41,7 +41,7 @@ int teacher_list_callback(void *data, int argc, char **argv,
 int classroom_list_callback(void *data, int argc, char **argv,
                             char **az_col_name) {
   char **arr = (char **)data;
-  char newString[100];
+  char newString[200];
   sprintf(newString, CLASSROOM_LI_ITEM, argv[0]);
   *arr = appendstr(strdup(*arr), newString);
   return 0;
