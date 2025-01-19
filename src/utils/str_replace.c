@@ -12,7 +12,7 @@ int appendstr(char **string, const char *append) {
   }
 
   // Avoid NULL dereference
-  sprintf(new_string, "%s%s", *string ? *string : "", append);
+  snprintf(new_string, len, "%s%s", *string ? *string : "", append);
   free(*string);
   *string = new_string;
   return 0;
@@ -57,18 +57,19 @@ void str_replace(char **target, const char *strf, const char *strr) {
 
   // Calculate new length based on replacements
   size_t max_new_len = target_len + count * (replace_len - find_len);
-  char *buffer = malloc(max_new_len + 1);
+  char *buffer = malloc(max_new_len + 1); // Allocate new buffer
   if (!buffer) {
     return; // Handle allocation failure
   }
 
-  char *ptr = *target;
+  const char *ptr = *target;
   char *write_ptr = buffer;
+
   while (*ptr) {
     // Look for match
     if (strncmp(ptr, strf, find_len) == 0) {
       // Replace match with strr
-      strcpy(write_ptr, strr);
+      memcpy(write_ptr, strr, replace_len);
       write_ptr += replace_len;
       ptr += find_len;
     } else {
@@ -76,8 +77,73 @@ void str_replace(char **target, const char *strf, const char *strr) {
       *write_ptr++ = *ptr++;
     }
   }
+
   *write_ptr = '\0'; // Null-terminate new string
 
   free(*target);    // Free old string
   *target = buffer; // Update to new buffer
+}
+
+void str_replace_multiple(char **target, ReplacePair *replacements,
+                          size_t num_replacements) {
+  if (!target || !*target || !replacements || num_replacements == 0) {
+    return; // No work if input is NULL or no replacements
+  }
+
+  const char *src = *target;
+  size_t target_len = strlen(*target);
+
+  // Temporary buffer to calculate the size of the final string
+  size_t new_length = target_len;
+  size_t *find_lengths = malloc(num_replacements * sizeof(size_t));
+  size_t *replace_lengths = malloc(num_replacements * sizeof(size_t));
+
+  for (size_t i = 0; i < num_replacements; ++i) {
+    find_lengths[i] = strlen(replacements[i].find);
+    replace_lengths[i] = strlen(replacements[i].replace);
+  }
+
+  // First pass: Calculate final length
+  for (size_t i = 0; i < num_replacements; ++i) {
+    const char *p = src;
+    while ((p = strstr(p, replacements[i].find))) {
+      new_length += replace_lengths[i] - find_lengths[i];
+      p += find_lengths[i];
+    }
+  }
+
+  // Allocate new buffer for the modified string
+  char *buffer = malloc(new_length + 1);
+  if (!buffer) {
+    free(find_lengths);
+    free(replace_lengths);
+    return; // Allocation failure
+  }
+
+  // Second pass: Apply replacements
+  char *write_ptr = buffer;
+  while (*src) {
+    int replaced = 0;
+    for (size_t i = 0; i < num_replacements; ++i) {
+      if (strncmp(src, replacements[i].find, find_lengths[i]) == 0) {
+        // Copy replacement string
+        memcpy(write_ptr, replacements[i].replace, replace_lengths[i]);
+        write_ptr += replace_lengths[i];
+        src += find_lengths[i];
+        replaced = 1;
+        break;
+      }
+    }
+    if (!replaced) {
+      *write_ptr++ = *src++;
+    }
+  }
+
+  *write_ptr = '\0';
+
+  // Cleanup and update target
+  free(*target);
+  free(find_lengths);
+  free(replace_lengths);
+  *target = buffer;
 }

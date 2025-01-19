@@ -152,20 +152,20 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     char *dates = "\0";
     get_dates(db_cache, &dates);
 
-    if (res != NULL) {
-      str_replace(&file_buffer, "%res%", res);
-      str_replace(&file_buffer, "%title%", id_decoded);
-    } else {
-      str_replace(&file_buffer, "%res%", "");
-      str_replace(&file_buffer, "%title%", "Not Found");
-    }
+    ReplacePair replacements[] = {
+        {"%res%", res ? res : ""},
+        {"%title%", res ? id_decoded : "Not Found"},
+        {"%dates%", dates},
+        {"%effective%", effective_date},
+        {"%generated%", generated_date},
+        {"%wards%", wards_list},
+        {"%teachers%", teachers_list},
+        {"%classrooms%", classrooms_list},
+    };
 
-    str_replace(&file_buffer, "%dates%", dates);
-    str_replace(&file_buffer, "%effective%", effective_date);
-    str_replace(&file_buffer, "%generated%", generated_date);
-    str_replace(&file_buffer, "%wards%", wards_list);
-    str_replace(&file_buffer, "%teachers%", teachers_list);
-    str_replace(&file_buffer, "%classrooms%", classrooms_list);
+    str_replace_multiple(&file_buffer, replacements,
+                         sizeof(replacements) / sizeof(ReplacePair));
+
     free(wards_list);
     free(teachers_list);
     free(classrooms_list);
