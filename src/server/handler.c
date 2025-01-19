@@ -66,12 +66,6 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
   }
 
   char *method = strtok(buffer, " ");
-  // TODO: REMOVE
-  if (strcmp(method, "POST") == 0) {
-    print_info("method: '%s'", method);
-    return WEB_SERVER_ERROR;
-  }
-
   char *path = strtok(NULL, " ");
   strtok(NULL, " ");
 
