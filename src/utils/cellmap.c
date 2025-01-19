@@ -1,6 +1,7 @@
 #include "cellmap.h"
 #include "array.h"
 #include "error.h"
+#include "logger.h"
 
 CellMap *cellmap_init() {
   CellMap *cellmap = malloc(sizeof(*cellmap));
@@ -33,6 +34,10 @@ Error cellmap_get(CellMap *cellmap, Cell key, LessonArray *out) {
 void cellmap_resize(CellMap *cellmap) {
   uint new_cap = cellmap->cap * 2;
   Pair **new_list = calloc(new_cap, sizeof(Pair *)); // Allocate new list
+  if (!new_list) {
+    print_error("Failed to resize cellmap");
+    return;
+  }
 
   // Rehash all existing pairs
   for (uint i = 0; i < cellmap->cap; ++i) {
@@ -142,4 +147,19 @@ void cellmap_iterate(CellMap *cellmap, void (*callback)(Cell, LessonArray)) {
       current = current->next; // Move to the next pair in the chain (if any)
     }
   }
+}
+
+void cellmap_free(CellMap *cellmap) {
+  for (uint i = 0; i < cellmap->cap; ++i) {
+    Pair *current = cellmap->list[i];
+    while (current) {
+      Pair *next = current->next;
+      free_lesson_array(&current->val);
+      // arrayFree(&current->val);
+      free(current); // Free Pair structure itself
+      current = next;
+    }
+  }
+  free(cellmap->list); // Free the list
+  free(cellmap);       // Free the CellMap structure
 }

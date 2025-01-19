@@ -31,6 +31,7 @@ void cellmap_set(CellMap *cellmap, Cell key, LessonArray val);
 void cellmap_insert_or_push(CellMap *cellmap, Cell key, LessonArray val,
                             Lesson lesson);
 void cellmap_iterate(CellMap *cellmap, void (*callback)(Cell, LessonArray));
+void cellmap_free(CellMap *cellmap);
 
 void cellmap_collect(CellMap *cellmap, Item *items, int *item_count);
 int compare_cells(const void *a, const void *b);

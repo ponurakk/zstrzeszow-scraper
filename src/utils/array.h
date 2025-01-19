@@ -14,6 +14,8 @@ typedef struct Lesson {
   int weekday;
 } Lesson;
 
+void free_lesson(Lesson *lesson);
+
 typedef struct DbCache_t {
   char *date;
   sqlite3 *db;
@@ -59,4 +61,5 @@ DEFINE_ARRAY(DbCache)
       LessonArray *: LessonArrayFree,                                          \
       DbCacheArray *: DbCacheArrayFree)(array)
 
+void free_lesson_array(LessonArray *array);
 #endif // ARRAY_H

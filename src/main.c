@@ -196,6 +196,8 @@ void update_timetable(int signum) {
                                   NULL, NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
+  free(response.html);
+
   if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
     print_error("Failed getting generation date");
   }
@@ -249,6 +251,9 @@ void update_timetable(int signum) {
     print_debug("Successfully fetched %s", generation_date);
   }
 
+  xmlCleanupParser();
+  xmlFreeDoc(doc);
+  xmlXPathFreeContext(context);
   curl_easy_cleanup(curl_handle);
 }
 
@@ -288,23 +293,26 @@ int main() {
 
       if (err != SQLITE_SUCCESS) {
         print_error("%s", error_to_string(err));
+        sqlite3_close(db);
+        free(cache.date);
         return 1;
       }
 
       arrayPush(&gDb_cache, cache);
     }
   }
-
   closedir(dir);
 
   qsort(gDb_cache.array, gDb_cache.count, sizeof(DbCache), compare_db_cache);
 
   struct itimerval timer;
   struct sigaction sa;
+  memset(&sa, 0, sizeof(struct sigaction));
 
   // Install signal handler for SIGALRM
   sa.sa_handler = &update_timetable;
   sa.sa_flags = SA_RESTART;
+  sigemptyset(&sa.sa_mask);
   sigaction(SIGALRM, &sa, NULL);
 
   // Configure the timer to expire after 1 second, then every 1 second
@@ -320,6 +328,11 @@ int main() {
   if (err != WEB_SERVER_OK) {
     print_error("Failed launching web server");
     return 1;
+  }
+
+  for (int i = 0; i < gDb_cache.count; ++i) {
+    free(gDb_cache.array[i].date);
+    sqlite3_close(gDb_cache.array[i].db);
   }
 
   arrayFree(&gDb_cache);

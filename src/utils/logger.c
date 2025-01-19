@@ -5,7 +5,7 @@
 #include <time.h>
 
 char *get_current_time(const char *format) {
-  char buffer[100];
+  static char buffer[100];
   time_t currentTime;
   struct tm localTime;
 
@@ -14,7 +14,7 @@ char *get_current_time(const char *format) {
   localtime_r(&currentTime, &localTime);
 
   strftime(buffer, sizeof(buffer), format, &localTime);
-  return strdup(buffer);
+  return buffer;
 }
 
 void __print_debug() { printf("[\033[1;34mDEBUG\033[1;0m]: "); }

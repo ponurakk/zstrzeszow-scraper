@@ -57,7 +57,8 @@ Error server(DbCacheArray *db) {
 
     err = handle_client(new_socket, db, client);
     if (err != WEB_SERVER_OK) {
-      continue;
+      close(new_socket);
+      break;
     };
 
     close(new_socket);

@@ -29,3 +29,28 @@
 DEFINE_ARRAY_IMPLEMENTATION(int)
 DEFINE_ARRAY_IMPLEMENTATION(Lesson)
 DEFINE_ARRAY_IMPLEMENTATION(DbCache)
+
+void free_lesson(Lesson *lesson) {
+  if (lesson->class_id) {
+    free(lesson->class_id);
+  }
+  if (lesson->teacher_id) {
+    free(lesson->teacher_id);
+  }
+  if (lesson->hours) {
+    free(lesson->hours);
+  }
+  if (lesson->lesson_name) {
+    free(lesson->lesson_name);
+  }
+  if (lesson->classroom) {
+    free(lesson->classroom);
+  }
+}
+
+void free_lesson_array(LessonArray *array) {
+  for (size_t i = 0; i < array->count; i++) {
+    free_lesson(&array->array[i]);
+  }
+  free(array->array); // Free the array of lessons
+}
