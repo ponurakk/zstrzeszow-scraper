@@ -289,15 +289,6 @@ int main() {
         return 1;
       }
 
-      err = create_database(db);
-
-      if (err != SQLITE_SUCCESS) {
-        print_error("%s", error_to_string(err));
-        sqlite3_close(db);
-        free(cache.date);
-        return 1;
-      }
-
       arrayPush(&gDb_cache, cache);
     }
   }
