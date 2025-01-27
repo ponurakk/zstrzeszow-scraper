@@ -51,6 +51,38 @@ int date_callback(void *data, int argc, char **argv, char **az_col_name) {
   return 0;
 }
 
+// It is a great implementation of a counter don't judge me
+Error update_count(char *path, int *new_count) {
+  FILE *file_ptr = fopen(path, "r+");
+
+  if (file_ptr == NULL) {
+    print_debug("%s file doesn't exits", path);
+    file_ptr = fopen(path, "w+");
+
+    if (file_ptr == NULL) {
+      print_error("Failed to create %s", path);
+      return IO_ERROR;
+    }
+
+    fprintf(file_ptr, "%d", 0);
+    fseek(file_ptr, 0, SEEK_SET);
+  }
+
+  int count;
+  if (fscanf(file_ptr, "%d", &count) != 1) {
+    print_error("Failed to read count value");
+    fclose(file_ptr);
+    return IO_ERROR;
+  }
+
+  *new_count = ++count;
+  fseek(file_ptr, 0, SEEK_SET);
+  fprintf(file_ptr, "%d", count);
+  fclose(file_ptr);
+
+  return IO_OK;
+}
+
 Error handle_client(int client_socket, DbCacheArray *db_cache,
                     struct sockaddr_in client) {
   char buffer[2048];
@@ -132,6 +164,12 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     urldecode2(id_decoded, id);
   }
 
+  int count = 0;
+
+  if (templ != NONE) {
+    update_count("./count.txt", &count);
+  }
+
   if (templ == WARD || templ == TEACHER || templ == CLASSROOM) {
     char *res = NULL;
     fetch_table(db, &res, templ, id_decoded, shortened);
@@ -177,6 +215,9 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     char *select = "\0";
     get_select(db, &select);
     str_replace(&file_buffer, "%select%", select);
+    char str[50];
+    sprintf(str, "%d", count);
+    str_replace(&file_buffer, "%count%", str);
     free(select);
   }
 
