@@ -188,16 +188,22 @@ Error parse_lesson(xmlNodePtr lesson_cell, xmlXPathContextPtr context,
     return TIMETABLE_OK;
   }
 
-  int count = subject_html->nodesetval->nodeNr;
+  xmlXPathObjectPtr subject_html_a =
+      xmlXPathEvalExpression((xmlChar *)".//a", context);
 
-  if (count == 2) { // Normal
+  int count = subject_html->nodesetval->nodeNr;
+  int a_count = subject_html_a->nodesetval->nodeNr;
+
+  if ((count == 1 && a_count == 2) || (count == 2 && a_count == 1)) { // Normal
     parse_2_spans(context, &l);
     arrayPush(lesson_list, l);
-  } else if (count == 3) { // Single group
+  } else if ((count == 2 && a_count == 2) ||
+             (count == 3 && a_count == 1)) { // Single group
     parse_3_spans(context, &l, 0);
     arrayPush(lesson_list, l);
-  } else if (count >= 6) { // Two groups or more
-    for (int i = 0; i < count / 3; ++i) {
+  } else if ((count >= 4 && a_count >= 4) ||
+             (count >= 6 || a_count >= 2)) { // Two groups or more
+    for (int i = 0; i < (count + a_count) / 4; ++i) {
       parse_3_spans(context, &l, i);
       arrayPush(lesson_list, l);
       l.hours = strdup(hours);
