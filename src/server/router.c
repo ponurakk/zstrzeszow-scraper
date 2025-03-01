@@ -63,6 +63,8 @@ Error get_template(char *path, char **file_buffer, long *file_size,
         *templ = TEACHER;
       } else if (strcmp(split, "s") == 0) {
         *templ = CLASSROOM;
+      } else if (strcmp(split, "db") == 0) {
+        *templ = DATABASE;
       } else {
         file_path = NOT_FOUND_FILE;
         *templ = NONE;

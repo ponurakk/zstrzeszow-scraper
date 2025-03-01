@@ -13,7 +13,8 @@ typedef enum Template_t {
   INDEX = 1,
   WARD = 2,
   TEACHER = 3,
-  CLASSROOM = 4
+  CLASSROOM = 4,
+  DATABASE = 5,
 } Template;
 
 char *path_to_file(char *path);

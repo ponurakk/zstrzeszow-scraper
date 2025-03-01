@@ -43,6 +43,7 @@
 #define TD_CLOSE "</td>"
 
 #define DATES_LI "<li><a class=\"date\" href=\"?date=%1$s\">%1$s</a></li>"
+#define DATES_DUMP_LI "<li><a class=\"date\" href=\"/db/%1$s\">%1$s</a></li>"
 
 void urldecode2(char *dst, const char *src);
 void respond_http(int client_socket, char **html, long file_size,

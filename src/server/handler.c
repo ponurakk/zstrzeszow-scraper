@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 int callback(CellMap **cellmap, int argc, char **argv, char **azColName);
@@ -19,7 +20,7 @@ int get_classrooms(sqlite3 *db, char **list, void *callback);
 int get_date(sqlite3 *db, char **generated_date, char **effective_date,
              void *callback);
 int get_select(sqlite3 *db, char **select);
-int get_dates(DbCacheArray *db_cache, char **list);
+int get_dates(DbCacheArray *db_cache, char **list, char *data);
 
 int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
   char newString[200];
@@ -188,7 +189,7 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     get_date(db, &generated_date, &effective_date, date_callback);
 
     char *dates = "\0";
-    get_dates(db_cache, &dates);
+    get_dates(db_cache, &dates, DATES_LI);
 
     ReplacePair replacements[] = {
         {"%res%", res ? res : ""},
@@ -214,11 +215,64 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
   } else if (templ == INDEX) {
     char *select = "\0";
     get_select(db, &select);
-    str_replace(&file_buffer, "%select%", select);
-    char str[50];
+
+    char str[24];
     sprintf(str, "%d", count);
-    str_replace(&file_buffer, "%count%", str);
+
+    char *dates = "\0";
+    get_dates(db_cache, &dates, DATES_DUMP_LI);
+
+    ReplacePair replacements[] = {
+        {"%select%", select},
+        {"%count%", str},
+        {"%dates%", dates},
+    };
+
+    str_replace_multiple(&file_buffer, replacements,
+                         sizeof(replacements) / sizeof(ReplacePair));
+
     free(select);
+    free(dates);
+  } else if (templ == DATABASE) {
+    struct stat file_stat;
+
+    char filename[20];
+    sprintf(filename, "./backup/%s.db", id_decoded);
+
+    if (stat(filename, &file_stat) < 0) {
+      const char *error_message = "Database dump not found!";
+      send(client_socket, error_message, strlen(error_message), 0);
+      return WEB_SERVER_OK;
+    }
+
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+      perror("File not found");
+      return WEB_SERVER_OK;
+    }
+
+    char header[128];
+    sprintf(header,
+            "HTTP/1.1 200 OK\r\nContent-Type: "
+            "application/x-sqlite3\r\nContent-Disposition: attachment; "
+            "filename=\"%s.db\"\r\n\r\n",
+            id_decoded);
+    send(client_socket, header, strlen(header), 0);
+
+    char buffer[1024];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+      send(client_socket, buffer, bytes_read, 0);
+    }
+
+    fclose(file);
+
+    free(file_buffer);
+    free(id_decoded);
+    if (id != NULL) {
+      free(id);
+    }
+    return WEB_SERVER_OK;
   }
 
   respond_http(client_socket, &file_buffer, strlen(file_buffer),
@@ -234,12 +288,14 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
 
 void respond_http(int client_socket, char **html, long file_size,
                   char *content_type) {
-  char response[file_size + 100];
-  snprintf(response, sizeof(response),
+  char response_header[256];
+  snprintf(response_header, sizeof(response_header),
            "HTTP/1.1 200 OK\r\nContent-Type: %s; "
-           "charset=UTF-8\r\nContent-Length: %lu\r\n\r\n%s",
-           content_type, strlen(*html), *html);
-  write(client_socket, response, strlen(response));
+           "charset=UTF-8\r\nContent-Length: %lu\r\n\r\n",
+           content_type, file_size);
+  write(client_socket, response_header, strlen(response_header));
+
+  write(client_socket, *html, file_size);
 }
 
 typedef struct StringCache_t {
@@ -628,12 +684,12 @@ int get_select(sqlite3 *db, char **select) {
   return 0;
 }
 
-int get_dates(DbCacheArray *db_cache, char **list) {
+int get_dates(DbCacheArray *db_cache, char **list, char *data) {
   StringCache cache = {.str = malloc(1024), .size = 1024, .used = 0};
   cache.str[0] = '\0';
 
   for (int i = 0; i < db_cache->count; ++i) {
-    append_str(&cache, DATES_LI, db_cache->array[i].date);
+    append_str(&cache, data, db_cache->array[i].date);
   }
 
   *list = strdup(cache.str);
