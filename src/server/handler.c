@@ -7,6 +7,7 @@
 #include "../utils/str_replace.h"
 #include "router.h"
 #include <ctype.h>
+#include <errno.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
@@ -93,7 +94,7 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
 
   read_size = recv(client_socket, buffer, sizeof(buffer) - 1, 0);
   if (read_size < 0) {
-    perror("Recv failed");
+    print_error("Recv failed: %s", strerror(errno));
     close(client_socket);
     return WEB_SERVER_ERROR;
   }
@@ -247,7 +248,7 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
 
     FILE *file = fopen(filename, "rb");
     if (!file) {
-      perror("File not found");
+      print_error("File not found: %s", strerror(errno));
       return WEB_SERVER_OK;
     }
 
@@ -257,12 +258,17 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
             "application/x-sqlite3\r\nContent-Disposition: attachment; "
             "filename=\"%s.db\"\r\n\r\n",
             id_decoded);
-    send(client_socket, header, strlen(header), 0);
+    write(client_socket, header, strlen(header));
 
     char buffer[1024];
     size_t bytes_read;
+    ssize_t bytes_written;
     while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-      send(client_socket, buffer, bytes_read, 0);
+      bytes_written = write(client_socket, buffer, bytes_read);
+      if (bytes_written == -1) {
+        print_error("Error writing to client socket: %s", strerror(errno));
+        break;
+      }
     }
 
     fclose(file);
@@ -317,7 +323,7 @@ void append_str(StringCache *cache, const char *format, ...) {
     cache->size = (cache->size + required_size) * 2;
     cache->str = realloc(cache->str, cache->size);
     if (cache->str == NULL) {
-      perror("Failed to reallocate memory");
+      print_error("Failed to reallocate memory: %s", strerror(errno));
       exit(EXIT_FAILURE);
     }
   }

@@ -4,8 +4,9 @@
 #include "../utils/logger.h"
 #include "handler.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <sqlite3.h>
-#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 Error server(DbCacheArray *db) {
@@ -16,14 +17,14 @@ Error server(DbCacheArray *db) {
   // Create socket
   socket_desc = socket(AF_INET, SOCK_STREAM, 0);
   if (socket_desc == -1) {
-    perror("Could not create socket");
+    print_error("Could not create socket: %s", strerror(errno));
     return WEB_SERVER_ERROR;
   }
 
   int opt = 1;
   if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) <
       0) {
-    perror("setsockopt(SO_REUSEADDR) failed");
+    print_error("setsockopt(SO_REUSEADDR) failed: %s", strerror(errno));
     return WEB_SERVER_ERROR;
   }
 
@@ -34,13 +35,13 @@ Error server(DbCacheArray *db) {
 
   // Bind
   if (bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) {
-    perror("Bind failed\n");
+    print_error("Bind failed: %s", strerror(errno));
     return WEB_SERVER_ERROR;
   }
 
   // Listen
   if (listen(socket_desc, 3) < 0) {
-    perror("Listen Failed");
+    print_error("Listen Failed: %s", strerror(errno));
     return WEB_SERVER_ERROR;
   }
 
@@ -51,7 +52,7 @@ Error server(DbCacheArray *db) {
   while ((new_socket = accept(socket_desc, (struct sockaddr *)&client,
                               (socklen_t *)&c))) {
     if (new_socket < 0) {
-      perror("Accept failed");
+      print_error("Accept failed: %s", strerror(errno));
       continue;
     }
 
@@ -65,7 +66,7 @@ Error server(DbCacheArray *db) {
   }
 
   if (new_socket < 0) {
-    perror("accept failed");
+    print_error("Accept failed: %s", strerror(errno));
   }
 
   close(socket_desc);

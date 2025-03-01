@@ -1,5 +1,7 @@
 #include "router.h"
 #include "../utils/error.h"
+#include "../utils/logger.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +21,7 @@ char *read_file(const char *filename, long *file_size) {
   char *file_buffer = NULL;
 
   if (file == NULL) {
-    perror("Failed to open file");
+    print_error("Failed to open file: %s", strerror(errno));
     return NULL;
   }
 
@@ -29,14 +31,14 @@ char *read_file(const char *filename, long *file_size) {
 
   file_buffer = (char *)malloc(*file_size + 1);
   if (file_buffer == NULL) {
-    perror("Memory allocation failed");
+    print_error("Memory allocation failed: %s", strerror(errno));
     fclose(file);
     return NULL;
   }
 
   size_t bytes_read = fread(file_buffer, 1, *file_size, file);
   if (bytes_read != *file_size) {
-    perror("Failed to read the entire file");
+    print_error("Failed to read the entire file: %s", strerror(errno));
     free(file_buffer);
     fclose(file);
     return NULL;
