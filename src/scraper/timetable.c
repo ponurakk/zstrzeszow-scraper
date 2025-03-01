@@ -5,6 +5,22 @@
 #include <libxml2/libxml/HTMLparser.h>
 #include <string.h>
 
+int is_valid_date_format(const char *date) {
+  if (strlen(date) != 10)
+    return 0;
+  if (date[4] != '-' || date[7] != '-')
+    return 0;
+
+  for (int i = 0; i < 10; i++) {
+    if (i == 4 || i == 7)
+      continue;
+    if (!isdigit(date[i]))
+      return 0;
+  }
+
+  return 1;
+}
+
 Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
   xmlXPathObjectPtr footer = xmlXPathEvalExpression(
       (xmlChar *)"//table/tr[3]/td[2]/table/tr/td", context);
@@ -29,6 +45,12 @@ Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
     xmlXPathFreeObject(footer);
     print_error("Failed parsing generation date");
     return TIMETABLE_ERROR;
+  }
+
+  if (!is_valid_date_format(generation_date)) {
+    int day, month, year;
+    sscanf(generation_date, "%d.%d.%d", &day, &month, &year);
+    sprintf(generation_date, "%04d-%02d-%02d", year, month, day);
   }
 
   xmlFree(footer_text);
