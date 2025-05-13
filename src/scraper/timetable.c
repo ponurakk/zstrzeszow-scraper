@@ -22,8 +22,28 @@ int is_valid_date_format(const char *date) {
 }
 
 Error get_generation_date(xmlXPathContextPtr context, char *generation_date) {
-  xmlXPathObjectPtr footer = xmlXPathEvalExpression(
-      (xmlChar *)"//table/tr[3]/td[2]/table/tr/td", context);
+  xmlXPathObjectPtr checkForTds =
+      xmlXPathEvalExpression((xmlChar *)"//div/table/tr", context);
+
+  if (checkForTds == NULL || checkForTds->nodesetval == NULL ||
+      checkForTds->nodesetval->nodeNr == 0) {
+    print_error("Failed getting tds");
+    return TIMETABLE_ERROR;
+  }
+
+  char tdNumber[64];
+
+  if (checkForTds->nodesetval->nodeNr == 3) {
+    sprintf(tdNumber, "//div/table/tr[2]/td[2]/table/tr/td");
+  } else if (checkForTds->nodesetval->nodeNr == 4) {
+    sprintf(tdNumber, "//div/table/tr[3]/td[2]/table/tr/td");
+  } else {
+    print_error("Good vulcan programmers don't exist");
+    return TIMETABLE_ERROR;
+  }
+
+  xmlXPathObjectPtr footer =
+      xmlXPathEvalExpression((xmlChar *)tdNumber, context);
 
   if (footer == NULL || footer->nodesetval == NULL ||
       footer->nodesetval->nodeNr == 0) {
@@ -341,7 +361,8 @@ Error get_timetable(LessonArray *lesson_list, int i, char *timetable_url,
   }
 
   if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
-    print_error("Failed getting valid from date");
+    sprintf(effective_date, "%s", generation_date);
+    print_warning("Failed getting valid from date, using generation date");
   }
 
   if (parse_timetable(context, lesson_list, ward->full) != TIMETABLE_OK) {
