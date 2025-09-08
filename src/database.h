@@ -1,10 +1,29 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include "scraper/list.h"
 #include "utils/array.h"
 #include "utils/error.h"
 #include <sqlite3.h>
+
+typedef struct {
+  // o1
+  char *id;
+  // 1AT
+  char *full;
+  // 1
+  int class_number;
+  // AT
+  char *tag;
+} Ward;
+
+typedef struct {
+  // n1
+  char *id;
+  // Ni
+  char *initials;
+  // N.Surname
+  char *name;
+} Teacher;
 
 Error sqlite_result(sqlite3 *db, int rc, const char *successMessage);
 

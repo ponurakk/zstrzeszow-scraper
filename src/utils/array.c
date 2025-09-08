@@ -37,9 +37,6 @@ void free_lesson(Lesson *lesson) {
   if (lesson->teacher_id) {
     free(lesson->teacher_id);
   }
-  if (lesson->hours) {
-    free(lesson->hours);
-  }
   if (lesson->lesson_name) {
     free(lesson->lesson_name);
   }

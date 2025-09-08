@@ -6,14 +6,23 @@
 #include <arpa/inet.h>
 #include <sqlite3.h>
 
-#define WARDS_LI_ITEM "<li><a class=\"flex justify-center rounded-md border-white border border-opacity-10 bg-none bg-opacity-5 p-1\" href=\"/o/%1$s\">%1$s</a></li>"
-#define TEACHERS_LI_ITEM "<li><a class=\"flex justify-center rounded-md border-white border border-opacity-10 bg-none bg-opacity-5 p-1\" href=\"/n/%1$s\">%2$s (%1$s)</a></li>"
-#define CLASSROOM_LI_ITEM "<li><a class=\"flex justify-center rounded-md border-white border border-opacity-10 bg-none bg-opacity-5 p-1\" href=\"/s/%1$s\">%1$s</a></li>"
+#define WARDS_LI_ITEM                                                          \
+  "<li><a class=\"flex justify-center rounded-md border-white border "         \
+  "border-opacity-10 bg-none bg-opacity-5 p-1\" "                              \
+  "href=\"/o/%1$s\">%1$s</a></li>"
+#define TEACHERS_LI_ITEM                                                       \
+  "<li><a class=\"flex justify-center rounded-md border-white border "         \
+  "border-opacity-10 bg-none bg-opacity-5 p-1\" "                              \
+  "href=\"/n/%1$s\">%1$s</a></li>"
+#define CLASSROOM_LI_ITEM                                                      \
+  "<li><a class=\"flex justify-center rounded-md border-white border "         \
+  "border-opacity-10 bg-none bg-opacity-5 p-1\" "                              \
+  "href=\"/s/%1$s\">%1$s</a></li>"
 
 #define WARDS_OPTION_ITEM                                                      \
   "<option value=\"/o/%1$s\" class=\"text-white\">%1$s</option>"
 #define TEACHERS_OPTION_ITEM                                                   \
-  "<option value=\"/n/%1$s\" class=\"text-white\">%2$s (%1$s)</option>"
+  "<option value=\"/n/%1$s\" class=\"text-white\">%1$s</option>"
 #define CLASSROOM_OPTION_ITEM                                                  \
   "<option value=\"/s/%1$s\" class=\"text-white\">%1$s</option>"
 

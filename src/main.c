@@ -4,6 +4,7 @@
 #include "server/listener.h"
 #include "utils/array.h"
 #include "utils/cellmap.h"
+#include "utils/error.h"
 #include "utils/logger.h"
 #include <dirent.h>
 #include <libxml/HTMLparser.h>
@@ -11,25 +12,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 DbCacheArray gDb_cache;
 
-static size_t write_html_callback(void *contents, size_t size, size_t nmemb,
-                                  void *userp) {
+static size_t write_callback(void *contents, size_t size, size_t nmemb,
+                             void *userp) {
   size_t realsize = size * nmemb;
   CURLResponse *mem = (CURLResponse *)userp;
-  char *ptr = realloc(mem->html, mem->size + realsize + 1);
 
-  if (!ptr) {
-    printf("Not enough memory available (realloc returned NULL)\n");
+  char *ptr = realloc(mem->data, mem->size + realsize);
+  if (ptr == NULL) {
+    fprintf(stderr, "realloc failed\n");
     return 0;
   }
 
-  mem->html = ptr;
-  memcpy(&(mem->html[mem->size]), contents, realsize);
+  mem->data = ptr;
+  memcpy(&(mem->data[mem->size]), contents, realsize);
   mem->size += realsize;
-  mem->html[mem->size] = 0;
-
   return realsize;
 }
 
@@ -38,13 +38,13 @@ CURLResponse get_request(CURL *curl_handle, const char *url) {
   CURLResponse response;
 
   // initialize the response
-  response.html = malloc(1);
+  response.data = malloc(1);
   response.size = 0;
 
   // specify URL to GET
   curl_easy_setopt(curl_handle, CURLOPT_URL, url);
   // send all data returned by the server to WriteHTMLCallback
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_html_callback);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_callback);
   // pass "response" to the callback function
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&response);
   // set a User-Agent header
@@ -61,6 +61,69 @@ CURLResponse get_request(CURL *curl_handle, const char *url) {
   }
 
   return response;
+}
+
+Error get_html(CURLResponse response, CURLResponse *html_data) {
+  int to_child[2], from_child[2];
+
+  if (pipe(to_child) == -1 || pipe(from_child) == -1) {
+    perror("pipe");
+    return IO_ERROR;
+  }
+
+  pid_t pid = fork();
+  if (pid == -1) {
+    perror("fork");
+    return IO_ERROR;
+  }
+
+  if (pid == 0) {
+    dup2(to_child[0], STDIN_FILENO);
+    dup2(from_child[1], STDOUT_FILENO);
+
+    close(to_child[1]);
+    close(from_child[0]);
+
+    // i'm not a fan of this approach but it works :P
+    execlp("pdftohtml", "pdftohtml", "-enc", "UTF-8", "-noframes", "-s", "-i",
+           "-stdout", "-", "out.html", (char *)NULL);
+
+    perror("execlp");
+    _exit(1);
+  }
+
+  close(to_child[0]);
+  close(from_child[1]);
+
+  // write PDF bytes into child stdin
+  write(to_child[1], response.data, response.size);
+  close(to_child[1]);
+  free(response.data);
+
+  // read HTML output
+  CURLResponse html = {NULL, 0};
+  char buf[4096];
+  ssize_t n;
+  while ((n = read(from_child[0], buf, sizeof(buf))) > 0) {
+    char *ptr = realloc(html.data, html.size + n + 1);
+    if (!ptr) {
+      fprintf(stderr, "realloc failed\n");
+      free(html.data);
+      return IO_ERROR;
+    }
+    html.data = ptr;
+    memcpy(html.data + html.size, buf, n);
+    html.size += n;
+    html.data[html.size] = '\0';
+  }
+  close(from_child[0]);
+
+  html_data->size = html.size;
+  html_data->data = strdup(html.data);
+
+  free(html.data);
+
+  return 0;
 }
 
 int save_in_memory_to_file(sqlite3 *in_memory_db, const char *filename) {
@@ -90,66 +153,20 @@ int save_in_memory_to_file(sqlite3 *in_memory_db, const char *filename) {
   return rc;
 }
 
-Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
+Error fetch_timetable(xmlXPathContextPtr context, sqlite3 *db,
+                      char *timetable_url, char *generation_date) {
   Error err;
-  char list_url[100];
-  sprintf(list_url, "%s/lista.html", timetable_url);
-  CURLResponse response = get_request(curl_handle, list_url);
-
-  // parse the HTML document returned by the server
-  htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
-                                  NULL, NULL, HTML_PARSE_NOERROR);
-  xmlXPathContextPtr context = xmlXPathNewContext(doc);
-
-  xmlXPathObjectPtr ward_html_elements =
-      xmlXPathEvalExpression((xmlChar *)"//ul[1]/li", context);
-
-  xmlXPathObjectPtr teachers_html_elements =
-      xmlXPathEvalExpression((xmlChar *)"//ul[2]/li", context);
-
-  Ward ward_list[ward_html_elements->nodesetval->nodeNr];
-  Teacher teacher_list[teachers_html_elements->nodesetval->nodeNr];
-
-  print_info("Parsing wards list");
-  for (int i = 0; i < ward_html_elements->nodesetval->nodeNr; ++i) {
-    xmlNodePtr ward_html_element = ward_html_elements->nodesetval->nodeTab[i];
-    get_ward_list(ward_list, ward_html_element, context, i);
-
-    err = add_ward(db, ward_list[i]);
-    if (err != SQLITE_SUCCESS) {
-      print_error("%s", error_to_string(err));
-      return SCRAPER_ERROR;
-    }
-  }
-
-  print_info("Parsing teachers list");
-  for (int i = 0; i < teachers_html_elements->nodesetval->nodeNr; ++i) {
-    xmlNodePtr teacher_html_element =
-        teachers_html_elements->nodesetval->nodeTab[i];
-    get_teachers_list(teacher_list, teacher_html_element, context, i);
-
-    err = add_teacher(db, teacher_list[i]);
-    if (err != SQLITE_SUCCESS) {
-      print_error("%s", error_to_string(err));
-      return SCRAPER_ERROR;
-    }
-  }
-
-  int ward_list_size = sizeof(ward_list) / sizeof(ward_list[0]);
 
   LessonArray lesson_list;
   arrayInit(&lesson_list, 50);
-  char generation_date[100];
-  char effective_date[100];
+  char *effective_date = NULL;
 
   print_info("Parsing timetable");
-  for (int i = 0; i < ward_list_size; ++i) {
-    err = get_timetable(&lesson_list, i, timetable_url, &ward_list[i],
-                        curl_handle, generation_date, effective_date);
-    if (err != TIMETABLE_OK) {
-      print_error("%s", error_to_string(err));
-      return SCRAPER_ERROR;
-    }
+  err = get_timetable(&lesson_list, context, &effective_date);
+
+  if (err != TIMETABLE_OK) {
+    print_error("%s", error_to_string(err));
+    return SCRAPER_ERROR;
   }
 
   add_date(db, effective_date, generation_date);
@@ -163,9 +180,7 @@ Error fetch_timetable(CURL *curl_handle, sqlite3 *db, char *timetable_url) {
   sprintf(backup_name, "backup/%s.db", generation_date);
   save_in_memory_to_file(db, backup_name);
 
-  free(response.html);
   xmlXPathFreeContext(context);
-  xmlFreeDoc(doc);
   arrayFree(&lesson_list);
 
   return SCRAPER_OK;
@@ -186,27 +201,29 @@ void update_timetable(int signum) {
   CURL *curl_handle = curl_easy_init();
   char *timetable_url = TIMETABLE_URL;
 
-  char generation_date[100];
-  char effective_date[100];
+  char *generation_date = NULL;
+  char *effective_date = NULL;
 
   char timetable_path[100];
-  sprintf(timetable_path, "%s/plany/o1.html", timetable_url);
+  sprintf(timetable_path, "%s/plan%%20oddzia%%C5%%82%%C3%%B3w.pdf",
+          timetable_url);
   CURLResponse response = get_request(curl_handle, timetable_path);
-  htmlDocPtr doc = htmlReadMemory(response.html, (unsigned long)response.size,
-                                  NULL, NULL, HTML_PARSE_NOERROR);
+  CURLResponse html;
+  get_html(response, &html);
+
+  htmlDocPtr doc = htmlReadMemory(html.data, (unsigned long)html.size, NULL,
+                                  NULL, HTML_PARSE_NOERROR);
   xmlXPathContextPtr context = xmlXPathNewContext(doc);
 
-  free(response.html);
+  if (get_effective_date(context, &effective_date) != TIMETABLE_OK) {
+    print_error("Failed getting effective date");
+  }
 
-  if (get_generation_date(context, generation_date) != TIMETABLE_OK) {
+  if (get_generation_date(context, &generation_date) != TIMETABLE_OK) {
     print_error("Failed getting generation date");
   }
 
-  if (get_effective_date(context, effective_date) != TIMETABLE_OK) {
-    print_error("Failed getting valid from date");
-  }
-
-  char *last_generation_date;
+  char *last_generation_date = "";
   if (gDb_cache.array[gDb_cache.count - 1].date != NULL) {
     last_generation_date = gDb_cache.array[gDb_cache.count - 1].date;
   }
@@ -228,7 +245,7 @@ void update_timetable(int signum) {
       return;
     }
 
-    err = fetch_timetable(curl_handle, tmp_db, timetable_url);
+    err = fetch_timetable(context, tmp_db, timetable_url, generation_date);
     if (err != SCRAPER_OK) {
       return;
       xmlCleanupParser();
@@ -253,7 +270,7 @@ void update_timetable(int signum) {
 
   xmlCleanupParser();
   xmlFreeDoc(doc);
-  xmlXPathFreeContext(context);
+  // xmlXPathFreeContext(context);
   curl_easy_cleanup(curl_handle);
 }
 

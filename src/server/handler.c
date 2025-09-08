@@ -33,7 +33,7 @@ int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
 int teacher_list_callback(void *data, int argc, char **argv,
                           char **az_col_name) {
   char newString[200];
-  sprintf(newString, TEACHERS_LI_ITEM, argv[1], argv[0]);
+  sprintf(newString, TEACHERS_LI_ITEM, argv[0]);
   appendstr((char **)data, newString);
   return 0;
 }
@@ -340,17 +340,17 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
   char *sql;
   switch (templ) {
   case WARD:
-    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+    sql = "SELECT \"order\", lesson_name, teacher_id, "
           "classroom, weekday, class_id FROM timetable WHERE class_id = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
   case TEACHER:
-    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+    sql = "SELECT \"order\", lesson_name, teacher_id, "
           "classroom, weekday, class_id FROM timetable WHERE teacher_id = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
   case CLASSROOM:
-    sql = "SELECT \"order\", hours, lesson_name, teacher_id, "
+    sql = "SELECT \"order\", lesson_name, teacher_id, "
           "classroom, weekday, class_id FROM timetable WHERE classroom = ? "
           "ORDER BY \"order\" ASC, weekday ASC";
     break;
@@ -369,7 +369,7 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
   }
 
   if (templ == WARD) {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 4 && id[i]; ++i) {
       id[i] = toupper(id[i]);
     }
   }
@@ -511,12 +511,11 @@ int callback(CellMap **cellmap, int argc, char **argv, char **az_col_name) {
 
   Lesson lesson = {
       .order = atoi(argv[0]),
-      .hours = argv[1] ? strdup(argv[1]) : NULL,
-      .lesson_name = argv[2] ? strdup(argv[2]) : NULL,
-      .teacher_id = argv[3] ? strdup(argv[3]) : NULL,
-      .classroom = argv[4] ? strdup(argv[4]) : NULL,
-      .weekday = atoi(argv[5]),
-      .class_id = argv[6] ? strdup(argv[6]) : NULL,
+      .lesson_name = argv[1] ? strdup(argv[1]) : NULL,
+      .teacher_id = argv[2] ? strdup(argv[2]) : NULL,
+      .classroom = argv[3] ? strdup(argv[3]) : NULL,
+      .weekday = atoi(argv[4]),
+      .class_id = argv[5] ? strdup(argv[5]) : NULL,
   };
 
   Cell cell = {.x = lesson.order, .y = lesson.weekday};
@@ -566,9 +565,11 @@ void urldecode2(char *dst, const char *src) {
 }
 
 int get_wards(sqlite3 *db, char **list, void *callback) {
-  int rc = sqlite3_exec(db, "SELECT \"full\" FROM wards", callback, list, 0);
+  int rc = sqlite3_exec(
+      db, "SELECT DISTINCT \"class_id\" FROM timetable ORDER BY \"class_id\"",
+      callback, list, 0);
   if (rc != SQLITE_OK) {
-    print_error("Failed to select data");
+    print_error("Failed to select `wards` data");
     sqlite3_close(db);
     return 1;
   }
@@ -577,10 +578,12 @@ int get_wards(sqlite3 *db, char **list, void *callback) {
 }
 
 int get_teachers(sqlite3 *db, char **list, void *callback) {
-  int rc = sqlite3_exec(db, "SELECT \"name\", \"initials\" FROM teachers",
+  int rc = sqlite3_exec(db,
+                        "SELECT DISTINCT \"teacher_id\" FROM timetable WHERE "
+                        "\"teacher_id\" IS NOT NULL ORDER BY \"teacher_id\"",
                         callback, list, 0);
   if (rc != SQLITE_OK) {
-    print_error("Failed to select data");
+    print_error("Failed to select `teachers` data");
     sqlite3_close(db);
     return 1;
   }
@@ -591,11 +594,11 @@ int get_teachers(sqlite3 *db, char **list, void *callback) {
 int get_classrooms(sqlite3 *db, char **list, void *callback) {
   int rc = sqlite3_exec(
       db,
-      "SELECT DISTINCT classroom FROM timetable WHERE "
-      "classroom != \"\" ORDER BY classroom + 0 ASC, classroom ASC",
+      "SELECT DISTINCT \"classroom\" FROM timetable WHERE "
+      "\"classroom\" != \"\" ORDER BY \"classroom\" + 0 ASC, \"classroom\" ASC",
       callback, list, 0);
   if (rc != SQLITE_OK) {
-    print_error("Failed to select data");
+    print_error("Failed to select `classrooms` data");
     sqlite3_close(db);
     return 1;
   }
@@ -610,7 +613,7 @@ int get_date(sqlite3 *db, char **generated_date, char **effective_date,
       sqlite3_exec(db, "SELECT generated, effective_from FROM date LIMIT 1",
                    callback, &dates, 0);
   if (rc != SQLITE_OK) {
-    print_error("Failed to select data");
+    print_error("Failed to select `date` data");
     sqlite3_close(db);
     return 1;
   }
@@ -636,12 +639,12 @@ int select_ward_list_callback(void *data, int argc, char **argv,
 
 int select_teacher_list_callback(void *data, int argc, char **argv,
                                  char **az_col_name) {
-  if (argv[0] == NULL || argv[1] == NULL) {
+  if (argv[0] == NULL) {
     return 1;
   }
+
   char newString[100];
-  snprintf(newString, sizeof(newString), TEACHERS_OPTION_ITEM, argv[1],
-           argv[0]);
+  snprintf(newString, sizeof(newString), TEACHERS_OPTION_ITEM, argv[0]);
   appendstr((char **)data, newString);
   return 0;
 }
