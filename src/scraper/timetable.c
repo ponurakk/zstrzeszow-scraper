@@ -316,6 +316,15 @@ Error parse_page(xmlNodePtr page, xmlXPathContextPtr context,
                             &l.classroom);
       }
 
+      if (b1->next && b1->next->next &&
+          xmlStrcmp(b1->next->next->name, (const xmlChar *)"br") == 0) {
+        if (b1->next->next->next &&
+            b1->next->next->next->type == XML_TEXT_NODE) {
+          l.lesson_name = concat(
+              l.lesson_name, (char *)xmlNodeGetContent(b1->next->next->next));
+        }
+      }
+
       arrayPush(lesson_list, l);
       xmlFree(b1_content);
       xmlFree(next_content);
@@ -339,7 +348,14 @@ Error parse_page(xmlNodePtr page, xmlXPathContextPtr context,
                             &l.classroom);
       }
 
-      // l.weekday++;
+      if (b2->next && b2->next->next &&
+          xmlStrcmp(b2->next->next->name, (const xmlChar *)"br") == 0) {
+        if (b2->next->next->next &&
+            b2->next->next->next->type == XML_TEXT_NODE) {
+          l.lesson_name = concat(
+              l.lesson_name, (char *)xmlNodeGetContent(b2->next->next->next));
+        }
+      }
 
       arrayPush(lesson_list, l);
       xmlFree(b2_content);

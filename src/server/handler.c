@@ -206,6 +206,13 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     str_replace_multiple(&file_buffer, replacements,
                          sizeof(replacements) / sizeof(ReplacePair));
 
+    ReplacePair replacements2[] = {
+        {"(gr.", "("},
+        {"gr_", ""},
+    };
+    str_replace_multiple(&file_buffer, replacements2,
+                         sizeof(replacements2) / sizeof(ReplacePair));
+
     free(wards_list);
     free(teachers_list);
     free(classrooms_list);
@@ -457,9 +464,11 @@ Error fetch_table(sqlite3 *db, char **response, Template templ, char *id,
     for (int j = 0; j < cell_array.count; ++j) {
       switch (templ) {
       case WARD:
-        append_str(&cache, WARD_PLAN_CELL, cell_array.array[j].lesson_name,
-                   cell_array.array[j].teacher_id,
-                   cell_array.array[j].classroom);
+        append_str(
+            &cache, WARD_PLAN_CELL, cell_array.array[j].lesson_name,
+            cell_array.array[j].teacher_id ? cell_array.array[j].teacher_id
+                                           : "",
+            cell_array.array[j].classroom ? cell_array.array[j].classroom : "");
         break;
       case TEACHER:
         append_str(&cache, TEACHER_PLAN_CELL, cell_array.array[j].lesson_name,
