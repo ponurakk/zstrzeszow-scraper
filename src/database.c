@@ -1,4 +1,4 @@
-#include "database.h"
+#include "scraper/list.h"
 #include "utils/array.h"
 #include "utils/error.h"
 #include "utils/logger.h"
@@ -60,6 +60,7 @@ Error create_timetable_table(sqlite3 *db) {
                              "\"class_id\" VARCHAR,"
                              "\"teacher_id\" VARCHAR,"
                              "\"order\" INTEGER NOT NULL,"
+                             "\"hours\" VARCHAR NOT NULL,"
                              "\"lesson_name\" VARCHAR NOT NULL,"
                              "\"classroom\" VARCHAR,"
                              "\"weekday\" INTEGER NOT NULL"
@@ -166,9 +167,10 @@ Error add_teacher(sqlite3 *db, Teacher teacher) {
 }
 
 Error add_lesson(sqlite3 *db, Lesson lesson) {
-  const char *sql = "INSERT INTO timetable(class_id, teacher_id, \"order\", "
-                    "lesson_name, classroom, weekday) "
-                    "VALUES (?,?,?,?,?,?)";
+  const char *sql =
+      "INSERT INTO timetable(class_id, teacher_id, \"order\", hours, "
+      "lesson_name, classroom, weekday) "
+      "VALUES (?,?,?,?,?,?,?)";
   sqlite3_stmt *stmt;
 
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -179,9 +181,10 @@ Error add_lesson(sqlite3 *db, Lesson lesson) {
   sqlite3_bind_text(stmt, 1, lesson.class_id, -1, SQLITE_STATIC);
   sqlite3_bind_text(stmt, 2, lesson.teacher_id, -1, SQLITE_STATIC);
   sqlite3_bind_int(stmt, 3, lesson.order);
-  sqlite3_bind_text(stmt, 4, lesson.lesson_name, -1, SQLITE_STATIC);
-  sqlite3_bind_text(stmt, 5, lesson.classroom, -1, SQLITE_STATIC);
-  sqlite3_bind_int(stmt, 6, lesson.weekday);
+  sqlite3_bind_text(stmt, 4, lesson.hours, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 5, lesson.lesson_name, -1, SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 6, lesson.classroom, -1, SQLITE_STATIC);
+  sqlite3_bind_int(stmt, 7, lesson.weekday);
 
   if (sqlite3_step(stmt) != SQLITE_DONE) {
     print_error("SQL error: %s", sqlite3_errmsg(db));

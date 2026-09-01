@@ -8,6 +8,7 @@ typedef struct Lesson {
   char *class_id;
   char *teacher_id;
   int order;
+  char *hours;
   char *lesson_name;
   char *classroom;
   int weekday;
