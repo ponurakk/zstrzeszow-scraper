@@ -22,6 +22,7 @@ int get_date(sqlite3 *db, char **generated_date, char **effective_date,
              void *callback);
 int get_select(sqlite3 *db, char **select);
 int get_dates(DbCacheArray *db_cache, char **list, char *data);
+int get_teacher_name(sqlite3 *db, char **initials, char **name);
 
 int ward_list_callback(void *data, int argc, char **argv, char **az_col_name) {
   char newString[200];
@@ -151,7 +152,8 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
   if (path == NULL) {
     print_error("Path is null");
     close(client_socket);
-    return WEB_SERVER_ERROR;
+    // Close the connection but don't stop the listener
+    return WEB_SERVER_OK;
   }
 
   char *file_buffer;
@@ -188,6 +190,12 @@ Error handle_client(int client_socket, DbCacheArray *db_cache,
     char *generated_date = NULL;
     char *effective_date = NULL;
     get_date(db, &generated_date, &effective_date, date_callback);
+
+    if (templ == TEACHER) {
+      char *teacher_name = NULL;
+      get_teacher_name(db, &id_decoded, &teacher_name);
+      id_decoded = teacher_name;
+    }
 
     char *dates = "\0";
     get_dates(db_cache, &dates, DATES_LI);
@@ -701,5 +709,37 @@ int get_dates(DbCacheArray *db_cache, char **list, char *data) {
   *list = strdup(cache.str);
 
   free(cache.str);
+  return 0;
+}
+
+int get_teacher_name(sqlite3 *db, char **initials, char **name) {
+  sqlite3_stmt *stmt = NULL;
+  int rc = sqlite3_prepare_v2(
+      db, "SELECT name FROM teachers WHERE initials = ?", -1, &stmt, NULL);
+
+  if (rc != SQLITE_OK) {
+    print_error("Failed to prepare statement");
+    sqlite3_close(db);
+    return 1;
+  }
+
+  rc = sqlite3_bind_text(stmt, 1, *initials, -1, SQLITE_TRANSIENT);
+
+  if (rc != SQLITE_OK) {
+    print_error("Failed to bind parameter");
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+    return 1;
+  }
+
+  if (sqlite3_step(stmt) == SQLITE_ROW) {
+    const unsigned char *db_name = sqlite3_column_text(stmt, 0);
+
+    if (db_name != NULL) {
+      *name = strdup((const char *)db_name);
+    }
+  }
+
+  sqlite3_finalize(stmt);
   return 0;
 }

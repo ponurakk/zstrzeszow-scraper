@@ -206,7 +206,7 @@ void update_timetable(int signum) {
     print_error("Failed getting valid from date");
   }
 
-  char *last_generation_date;
+  char *last_generation_date = "invalid";
   if (gDb_cache.array[gDb_cache.count - 1].date != NULL) {
     last_generation_date = gDb_cache.array[gDb_cache.count - 1].date;
   }
